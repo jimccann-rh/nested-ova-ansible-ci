@@ -1,0 +1,36 @@
+# Sample inventory file for Redfish Ansible modules
+#
+# For baseuri, if specifying names instead of IP addresses, make sure
+# that name is fully DNS resolvable.
+#
+# ORDER of idrac and esxi is IMPORTANT
+
+[web]
+#localhost
+web1       ansible_host=localhost
+#web1       ansible_host=10.93.245.232
+
+[esxi]
+#nested8-host.vpshere.local DC='1'
+#nested8-host3.vpshere.local DC='1'
+
+[isoweb:children]
+web
+
+[esxi:vars]
+# Credentials for esxi
+ansible_user=root
+ansible_password="{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
+ansible_python_interpreter=/usr/bin/python3
+ansible_ssh_extra_args='-o StrictHostKeyChecking=no'
+ansible_ssh_common_args='-o UserKnownHostsFile=/dev/null'
+
+[web:vars]
+ansible_user=root
+#ansible_user=jim
+
+# Shorter name for inventory_hostname.
+# Refers to the OS hostname, not the OOB controller.
+#host="{{inventory_hostname}}"
+
+

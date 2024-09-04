@@ -1,0 +1,164 @@
+---
+
+- name: Include vars of vcenter_host.yml
+  ansible.builtin.include_vars:
+    file: vcenter_host.yml
+    name: vcenter
+
+- name: List hosts in ESXi
+  debug:
+    msg: "Host: {{ inventory_hostname }}"
+  loop: "{{ groups['esxi'] }}"
+
+- name: List hosts in VC
+  debug:
+    msg: "Host: {{ inventory_hostname }}"
+  loop: "{{ groups['vc'] }}"
+
+- name: Set esxi name
+  ansible.builtin.set_fact:
+    host_fact_hostname: "{{ hostvars[groups['esxi'][my_idx]].inventory_hostname }}"
+
+- name: Setting host facts 
+  ansible.builtin.set_fact: 
+    host_fact_name: "{{ hostvars[groups['esxi'][my_idx]].inventory_hostname }}"
+
+- name: Setting host facts
+  ansible.builtin.set_fact:
+    vmkguest: "vmkernel8Guest"
+  when: '"8" in version'
+
+- name: Setting host facts
+  ansible.builtin.set_fact:
+    vmkguest: "vmkernel7Guest"
+  when: '"7" in version'
+
+- name: ESXi Exists
+  block:
+
+#    - name: "Wait for {{ inventory_hostname }} install of ESXi on VM to be complete"
+#      ansible.builtin.wait_for:
+#        host: "{{ host_fact_ip }}"
+#        port: 443
+#        sleep: 10
+#        timeout: 30
+
+#### TEMP TESTING
+    - name: "DELETE virtual machine {{ host_fact_name }} version {{ version }}"
+      community.vmware.vmware_guest:
+        datacenter: "{{ vcenter.vc_datacenter }}"
+        folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
+        name: "{{ host_fact_name }}"
+        state: absent
+        force: true
+      when: testingesxi | bool 
+
+    - name: "Does ESXi virtual machine {{ host_fact_hostname }} exist"
+      community.vmware.vmware_guest:
+        datacenter: "{{ vcenter.vc_datacenter }}"
+        folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
+        name: "{{ host_fact_hostname }}"
+        state: present
+
+    - name: "Does ESXi virtual machine {{ host_fact_hostname }} exist"
+      community.vmware.vmware_guest_info:
+        datacenter: "{{ vcenter.vc_datacenter }}"
+        name: "{{ host_fact_hostname }}"
+        schema: vsphere
+        properties:
+          - guest.ipAddress
+      register: nested_vm
+
+    - name: Add host to group esxi 
+      ansible.builtin.add_host:
+        name: '{{ host_fact_name }}'
+        groups: esxi
+        NESTEDVMIP: "{{ nested_vm.instance.guest.ipAddress }}"
+
+  rescue:
+
+    - community.vmware.vmware_deploy_ovf:
+        url: http://10.93.245.232:8080/Nested_ESXi8.0u2c_Appliance_Template_v1.ova
+        datacenter: "{{ vcenter.vc_datacenter }}"
+        name: '{{ host_fact_name }}'
+        enable_hidden_properties: true
+        folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
+        datastore: vsanDatastore
+        disk_provisioning: thin
+        networks:
+            "VM Network": "{{ vcenter.vc_fact_deployment_network }}"
+#            "VM Network": "{{ vcenter.vc_fact_deployment_network2 }}"
+        wait_for_ip_address: true
+        validate_certs: no
+        inject_ovf_env: true
+        properties:
+          guestinfo.password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}" # SSO Password for administrator@vsphere.local
+#      register: nested_vm
+
+    - name: "Does VM virtual machine {{ host_fact_hostname }} exist"
+      community.vmware.vmware_guest_info:
+        datacenter: "{{ vcenter.vc_datacenter }}"
+        name: "{{ host_fact_hostname }}"
+        schema: vsphere
+        properties:
+          - guest.ipAddress
+      register: nested_vm
+
+    - name: "shutdown virtual machine {{ host_fact_name }} version {{ version }}"
+      community.vmware.vmware_guest:
+        datacenter: "{{ vcenter.vc_datacenter }}"
+        folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
+        name: "{{ host_fact_name }}"
+        state: shutdownguest
+    
+    - pause:
+        seconds: 120
+    
+    - name: Resize disks to ESXi VM for local storage
+      community.vmware.vmware_guest_disk:
+        datacenter: "{{ vcenter.vc_datacenter }}"
+        name: "{{ host_fact_hostname }}"
+        disk:
+          - size_tb: 1
+            type: thin
+            datastore: vsanDatastore
+            state: present
+            scsi_controller: 0
+            unit_number: 2
+    
+    - name: "MODIFY cpu/memory virtual machine {{ host_fact_name }} version {{ version }}"
+      community.vmware.vmware_guest:
+        datacenter: "{{ vcenter.vc_datacenter }}"
+        folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
+        name: "{{ host_fact_name }}"
+        state: present
+        #state: rebootguest
+    #    guest_id: "{{ vmkguest }}"
+        hardware:
+          memory_mb: "{{ esximemory }}"
+          num_cpus: "{{ esxicpu }}"
+          nested_virt: true
+    
+    - name: Add host to group esxi 
+      ansible.builtin.add_host:
+        name: '{{ host_fact_name }}'
+        groups: esxi
+        NESTEDVMIP: "{{ nested_vm.instance.guest.ipAddress }}"
+        #NESTEDVMIP: "{{ nested_vm.instance.ipv4 }}"
+    
+- name: "poweron virtual machine {{ host_fact_name }} version {{ version }}"
+  community.vmware.vmware_guest:
+    datacenter: "{{ vcenter.vc_datacenter }}"
+    folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
+    name: "{{ host_fact_name }}"
+    state: poweredon
+
+
+- name: "*** Wait for {{ hostvars[groups['esxi'][my_idx]].inventory_hostname }} {{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }} install of ESXi on host to be complete"
+  ansible.builtin.wait_for:
+    host: "{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
+    port: 443
+#    delay: 180
+    sleep: 10
+    timeout: 900
+

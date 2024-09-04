@@ -1,0 +1,154 @@
+---
+
+- hosts: localhost
+  become: false
+  gather_facts: false
+
+  tasks:
+
+    - name: Add host to group esxi 
+      ansible.builtin.add_host:
+        name: '{{ item }}'
+        groups: esxi
+      loop: '{{ target_hosts | list }}'
+
+    - name: Add host to group vc
+      ansible.builtin.add_host:
+        name: '{{ item }}'
+        groups: vc
+      loop: '{{ target_vcs | list }}'
+
+  tags:
+    - always
+
+- name: create nested VM's
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars:
+    templocation: "{{ ansible_env.HOME }}/build"
+    mountpath: '/data/export/share'
+    version: "7"
+    esximemory: "131072"
+    esxicpu: "20"
+    testingesxi: false    
+    testingvc: false    
+
+  collections:
+    - community.general
+    - community.vmware
+
+  module_defaults:
+    group/vmware:
+      hostname: "{{ lookup('ansible.builtin.env', 'MAINVCHOSTNAME') }}"
+      username: "{{ lookup('ansible.builtin.env', 'MAINVCUSERNAME') }}"
+      password: "{{ lookup('ansible.builtin.env', 'VCPASSWORD') }}"
+      validate_certs: false
+
+  tasks:
+
+    - block:
+       - name: Needed packages on system
+         include_tasks: packlocal.yml
+      tags:
+        - packlocal
+        - never
+
+    - block:
+       - name: Deploy ova of ESXi
+         include_tasks: esxinested.yml
+         loop: "{{ groups['esxi'] | list }}"
+         loop_control:
+           loop_var: loop_bms
+           index_var: my_idx
+      tags:
+        - esxinested
+
+    - block:
+       - name:  Deploy ova of VC
+         include_tasks: vcnested.yml
+         loop: "{{ groups['vc'] | list }}"
+         loop_control:
+           loop_var: loop_bms_vc
+           index_var: my_idx_vc
+      tags:
+        - vcnested
+
+- hosts: localhost
+  connection: local
+  name: ESXi add vcenter
+  gather_facts: False
+  serial: 1
+  vars:
+    bootstrap: true
+    nfsetup: false
+    nfsiso: false
+    localcy: false
+
+  tags:
+    - hostvcenter
+
+  collections:
+    - community.general
+    - community.vmware
+
+  tasks:
+
+    - block:
+       - name: Add host to vcenter
+         include_tasks: addhosts_vcenter.yml
+         loop: "{{ groups['esxi'] | list }}"
+         loop_control:
+           loop_var: loop_bms
+           index_var: my_idx
+
+       - name: Add dvs to vcenter and add host to dvs
+         include_tasks: dvs_hosts_vcenter.yml
+         #when: '"1" in DC | string'
+         loop: "{{ groups['esxi'] | list }}"
+         loop_control:
+           loop_var: loop_bms
+           index_var: my_idx
+
+      tags:
+       - vcenterhost
+
+- name: REMOVE nested VM's
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars:
+    removevsphere: false
+  collections:
+    - community.general
+    - community.vmware
+
+  module_defaults:
+    group/vmware:
+      hostname: "{{ lookup('ansible.builtin.env', 'MAINVCHOSTNAME') }}"
+      username: "{{ lookup('ansible.builtin.env', 'MAINVCUSERNAME') }}"
+      password: "{{ lookup('ansible.builtin.env', 'VCPASSWORD') }}"
+      validate_certs: false
+
+  tasks:
+
+    - name: Remove vSphere environment
+      include_tasks: vsphere_remove.yml
+      loop: "{{ groups['esxi'] | list }}"
+      loop_control:
+        loop_var: loop_bms
+        index_var: my_idx
+      vars:
+        host_fact_name: "{{ hostvars[groups['esxi'][my_idx]].inventory_hostname }}"
+
+    - name:  Deploy ova of VC
+      include_tasks: vsphere_remove.yml
+      loop: "{{ groups['vc'] | list }}"
+      loop_control:
+        loop_var: loop_bms
+        index_var: my_idx
+      vars:
+        host_fact_name: "{{ hostvars[groups['vc'][my_idx]].inventory_hostname }}"
+
+  tags:
+    - removevsphere

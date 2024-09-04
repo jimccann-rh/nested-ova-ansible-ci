@@ -1,0 +1,36 @@
+---
+
+# local
+# pip3 install git+https://github.com/rthalley/dnspython.git
+# pip3 install pyvmomi
+# pip3 install pyvim
+# pip3 install requests
+# pip3 install omsdk
+
+# remote
+# sudo dnf install libnsl
+# sudo dnf install genisoimage
+# sudo dnf install python-pyvmomi
+
+
+- name: Install the needed pacakages
+  ansible.builtin.package:
+    name:
+      - python3-pip
+      - git
+      - gcc
+    state: latest
+  become: true
+
+
+- name: Install needed python packages
+  ansible.builtin.pip:
+    name:
+#      - git+https://github.com/rthalley/dnspython.git
+      - dnspython
+      - pyvmomi
+      - pyvim
+      - requests
+      - omsdk
+      - jmespath
+

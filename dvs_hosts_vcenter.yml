@@ -1,0 +1,73 @@
+---
+
+- name: Include vars of vcenter_host.yml
+  ansible.builtin.include_vars:
+    file: vcenter_host.yml
+    name: vcenter
+
+- set_fact:
+    vcdc: "{{ vcenter.vc_fact_datacenter1 }}" 
+#  when: '"1" in hostvars[groups["esxi"][my_idx]].DC | string'
+
+
+#- set_fact:
+#    vcdc: "{{ vcenter.vc_fact_datacenter2 }}"
+#  when: '"2" in hostvars[groups["esxi"][my_idx]].DC | string'
+
+#- set_fact:
+#    DC: "{{ hostvars[groups['esxi'][my_idx]].DC | string }}"
+
+- block:
+
+    - name: "Create dvSwitch {{ vcdc }}"
+      community.vmware.vmware_dvswitch:
+        datacenter: "{{ vcdc }}"
+        switch: "dvSwitch-nested" 
+        version: 6.6.0
+        mtu: 9000
+        uplink_quantity: 1
+        state: present
+      run_once: yes
+
+    - pause:
+        seconds: 10
+
+    - name: "Add Host to dVS dvSwitch-nested" 
+      community.vmware.vmware_dvs_host:
+        esxi_hostname: "{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
+        switch_name: "dvSwitch-nested"
+        vmnics:
+            - vmnic1
+        state: present
+
+    - pause:
+        seconds: 10
+
+    - name: Create no-vlan portgroup
+      community.vmware.vmware_dvs_portgroup:
+        portgroup_name: "{{ vcenter.vc_fact_deployment_network2 }}"
+        switch_name: "dvSwitch-nested"
+        vlan_id: 0
+        num_ports: 120
+        port_binding: static
+        state: present
+
+#    - pause:
+#        seconds: 30
+#
+#    - name: Migrate vMotion vmk from vswitch of host to dvs
+#      community.vmware.vmware_migrate_vmk:
+#        esxi_hostname: "{{ hostvars[inventory_hostname].ansible_host_ip }}"
+#        device: vmk2
+#        current_switch_name: vSwitch0
+#        current_portgroup_name: vMotion
+#        migrate_switch_name: "dvSwitch-{{ DC | string }}"
+#        migrate_portgroup_name: "{{ vcenter.vc_fact_deployment_network2 }}"
+
+  module_defaults:
+    group/vmware:
+      hostname: "{{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
+      username: 'administrator@{{ vcenter.vc_fact_domain }}'
+      password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
+      validate_certs: false
+

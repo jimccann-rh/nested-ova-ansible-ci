@@ -1,0 +1,154 @@
+---
+
+- name: Include vars of vcenter_host.yml
+  ansible.builtin.include_vars:
+    file: vcenter_host.yml
+    name: vcenter
+
+- name: List hosts in ESXi
+  debug:
+    msg: "Host: {{ inventory_hostname }}"
+  loop: "{{ groups['esxi'] }}"
+
+- name: List hosts in VC
+  debug:
+    msg: "Host: {{ inventory_hostname }}"
+  loop: "{{ groups['vc'] }}"
+
+- name: Set vc name
+  ansible.builtin.set_fact:
+    host_fact_hostname: "{{ hostvars[groups['vc'][my_idx_vc]].inventory_hostname }}"
+
+- name: Setting host facts 
+  ansible.builtin.set_fact: 
+    host_fact_name: "{{ hostvars[groups['vc'][my_idx_vc]].inventory_hostname }}"
+
+- name: Setting host facts
+  ansible.builtin.set_fact:
+    vmkguest: "vmkernel8Guest"
+  when: '"8" in version'
+
+- name: Setting host facts
+  ansible.builtin.set_fact:
+    vmkguest: "vmkernel7Guest"
+  when: '"7" in version'
+
+
+- name: ESXi Exists
+  block:
+
+#    - name: "Wait for {{ inventory_hostname }} install of ESXi on VM to be complete"
+#      ansible.builtin.wait_for:
+#        host: "{{ host_fact_ip }}"
+#        port: 443
+#        sleep: 10
+#        timeout: 30
+
+
+## TEMP TESTING
+    - name: "DELETE virtual machine {{ host_fact_name }} version {{ version }}"
+      community.vmware.vmware_guest:
+        datacenter: "{{ vcenter.vc_datacenter }}"
+        folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
+        name: "{{ host_fact_name }}"
+        state: absent
+        force: true
+      when: testingvc | bool
+
+    - name: "Does VC virtual machine {{ host_fact_hostname }} exist"
+      community.vmware.vmware_guest:
+        datacenter: "{{ vcenter.vc_datacenter }}"
+        folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
+        name: "{{ host_fact_hostname }}"
+        state: present
+
+    - name: "Does VC virtual machine {{ host_fact_hostname }} exist"
+      community.vmware.vmware_guest_info:
+        datacenter: "{{ vcenter.vc_datacenter }}"
+        name: "{{ host_fact_hostname }}"
+        schema: vsphere
+        properties:
+          - guest.ipAddress
+      register: nested_vm
+
+    - name: Wait for vCenter
+      vmware_about_info:
+        hostname: '{{ nested_vm.instance.guest.ipAddress }}'
+        username: 'administrator@vsphere.local'
+        password: "{{  lookup('ansible.builtin.env', 'VCESXIPASSWORD')  }}"
+        validate_certs: no
+      delegate_to: localhost
+      retries: 30
+      delay: 60
+      register: result
+      until: result is succeeded
+
+    - name: Add host to group vc
+      ansible.builtin.add_host:
+        name: '{{ host_fact_name }}'
+        groups: vc
+        NESTEDVMIP: "{{ nested_vm.instance.guest.ipAddress }}"
+    
+  rescue:
+
+    - community.vmware.vmware_deploy_ovf:
+        url: http://10.93.245.232:8080/VMware-vCenter-Server-Appliance-8.0.2.00100-22617221_OVF10.ova
+        datacenter: "{{ vcenter.vc_datacenter }}"
+        name: '{{ host_fact_name }}' 
+        enable_hidden_properties: true
+        folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
+        datastore: vsanDatastore
+        disk_provisioning: thin
+        networks:
+            "Network 1": "{{ vcenter.vc_fact_deployment_network }}"
+        wait_for_ip_address: true
+        validate_certs: no
+        inject_ovf_env: true
+        properties:
+          DeploymentOption.value: 'tiny' # vCenter t-shirt size: tiny,small,medium,large, or infrastructure 
+          guestinfo.cis.appliance.net.addr.family: 'ipv4' # ipv4 or ipv6
+          guestinfo.cis.appliance.net.mode: 'dhcp' # static or dhcp
+#          guestinfo.cis.appliance.net.pnid: 'localhost.localdomain' # "{{ vcenter_hostname }}.{{ domain }}" # FQDN of vcenter server
+          guestinfo.cis.appliance.root.passwd: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
+          guestinfo.cis.vmdir.password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}" # SSO Password for administrator@vsphere.local
+          domain: "vsphere.local"
+          guestinfo.cis.appliance.ssh.enabled: 'True'
+          guestinfo.cis.deployment.autoconfig: 'True' # Auto-configure after deployment
+#      register: nested_vm
+
+    - name: "Does VC virtual machine {{ host_fact_hostname }} exist"
+      community.vmware.vmware_guest_info:
+        datacenter: "{{ vcenter.vc_datacenter }}"
+        name: "{{ host_fact_hostname }}"
+        schema: vsphere
+        properties:
+          - guest.ipAddress
+      register: nested_vm
+    
+    - name: Add host to group vc
+      ansible.builtin.add_host:
+        name: '{{ host_fact_name }}'
+        groups: vc
+        NESTEDVMIP: "{{ nested_vm.instance.guest.ipAddress }}"
+    #    DC: "1"
+
+    - name: Wait for vCenter
+      vmware_about_info:
+        hostname: "{{ hostvars[groups['vc'][my_idx_vc]].NESTEDVMIP }}"
+        username: 'administrator@vsphere.local'
+        password: "{{  lookup('ansible.builtin.env', 'VCESXIPASSWORD')  }}"
+        validate_certs: no
+      delegate_to: localhost
+      retries: 30
+      delay: 60
+      register: result
+      until: result is succeeded
+    
+        
+    - name: "Wait for {{ hostvars[groups['vc'][my_idx_vc]].inventory_hostname }} {{ nested_vm.instance.guest.ipAddress }} install of VC on host to be complete"
+      ansible.builtin.wait_for:
+        host: "{{ nested_vm.instance.guest.ipAddress }}"
+        port: 443
+    #    delay: 180
+        sleep: 10
+        timeout: 900

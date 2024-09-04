@@ -1,0 +1,4 @@
+export VCESXIPASSWORD=''
+export VCPASSWORD=''
+export MAINVCUSERNAME="administrator@vsphere.local"
+export MAINVCHOSTNAME="vcenter.local"

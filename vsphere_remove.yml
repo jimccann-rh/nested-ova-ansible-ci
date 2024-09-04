@@ -1,0 +1,41 @@
+---
+
+- name: Include vars of vcenter_host.yml
+  ansible.builtin.include_vars:
+    file: vcenter_host.yml
+    name: vcenter
+
+- name: List hosts in ESXi
+  debug:
+    msg: "Host: {{ inventory_hostname }}"
+  loop: "{{ groups['esxi'] }}"
+
+- name: List hosts in VC
+  debug:
+    msg: "Host: {{ inventory_hostname }}"
+  loop: "{{ groups['vc'] }}"
+
+- name: Setting host facts
+  ansible.builtin.set_fact:
+    vmkguest: "vmkernel8Guest"
+  when: '"8" in version'
+
+- name: Setting host facts
+  ansible.builtin.set_fact:
+    vmkguest: "vmkernel7Guest"
+  when: '"7" in version'
+
+- name: Remove vSphere environment
+  block:
+
+    - name: "DELETE virtual machine {{ host_fact_name }} version {{ version }}"
+      community.vmware.vmware_guest:
+        datacenter: "{{ vcenter.vc_datacenter }}"
+        folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
+        name: "{{ host_fact_name }}"
+        state: absent
+        force: true
+
+  when: removevsphere | bool 
+
+
