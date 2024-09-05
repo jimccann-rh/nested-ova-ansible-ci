@@ -42,7 +42,7 @@
     group/vmware:
       hostname: "{{ lookup('ansible.builtin.env', 'MAINVCHOSTNAME') }}"
       username: "{{ lookup('ansible.builtin.env', 'MAINVCUSERNAME') }}"
-      password: "{{ lookup('ansible.builtin.env', 'VCPASSWORD') }}"
+      password: "{{ lookup('ansible.builtin.env', 'MAINVCPASSWORD') }}"
       validate_certs: false
 
   tasks:
@@ -53,6 +53,20 @@
       tags:
         - packlocal
         - never
+
+    - block:
+       - name: Include vars of vcenter_host-7.yml
+         ansible.builtin.include_vars:
+           file: vcenter_host-7.yml
+
+      when: '"7" in version'
+
+    - block:
+       - name: Include vars of vcenter_host-8.yml
+         ansible.builtin.include_vars:
+           file: vcenter_host-8.yml
+
+      when: '"8" in version'
 
     - block:
        - name: Deploy ova of ESXi
@@ -127,7 +141,7 @@
     group/vmware:
       hostname: "{{ lookup('ansible.builtin.env', 'MAINVCHOSTNAME') }}"
       username: "{{ lookup('ansible.builtin.env', 'MAINVCUSERNAME') }}"
-      password: "{{ lookup('ansible.builtin.env', 'VCPASSWORD') }}"
+      password: "{{ lookup('ansible.builtin.env', 'MAINVCPASSWORD') }}"
       validate_certs: false
 
   tasks:
