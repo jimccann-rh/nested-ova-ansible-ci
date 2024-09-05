@@ -1,4 +1,4 @@
-# nested-ovf-ansible
+# nested-ova-ansible
 Create a dynamic vsphere setup (using dhcp)
 
 You will need a server to host your ova files via http. I suggest miniserver (https://github.com/svenstaro/miniserve) or you could use some type of s3 bucket. You will also need a dhcp server on your network that you create your nested vSphere in.
