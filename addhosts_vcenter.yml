@@ -102,6 +102,7 @@
         hostname: "{{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
         username: "administrator@{{ vcenter.vc_fact_domain }}"
         password: '{{ vcenter.vc_fact_password }}'
+        esxi_hostname: "{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
         #esxi_hostname: "{{ hostvars[inventory_hostname].ansible_host_ip }}"
         #esxi_hostname: '{{ inventory_hostname }}'
         validate_certs: false
