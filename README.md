@@ -15,3 +15,5 @@ Forged transmits accept
 
 Also if you are running on top of a vSAN don't forget this:  esxcli system settings advanced set -o /VSAN/FakeSCSIReservations -i 1
 
+
+PS. This code is a work in progress to have more features/options. So if you see stuff and wonder why is that there or remarked out. Debugging for new features and options in the future.
