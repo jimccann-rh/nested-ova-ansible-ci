@@ -101,13 +101,11 @@
         datacenter: "{{ vcenter.vc_datacenter }}"
       register: guest_info
       until: guest_info.instance.hw_power_status == "poweredOff"
-#      until: guest_info.guest_tools_status == "guestToolsRunning"
       retries: 60 
       delay: 5
 
     - debug:
         msg: "{{ guest_info }}"
-#    - pause:
 
     - name: Resize disks to ESXi VM for local storage
       community.vmware.vmware_guest_disk:
@@ -160,7 +158,6 @@
 
 - debug:
     msg: "{{ guest_info }}"
-#- pause:
 
 - name: "Does ESXi virtual machine {{ host_fact_hostname }} exist get ip"
   community.vmware.vmware_guest_info:

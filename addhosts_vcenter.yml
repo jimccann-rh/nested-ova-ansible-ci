@@ -55,7 +55,6 @@
   module_defaults:
     group/vmware:
       hostname: "{{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
-      #hostname: "{{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
       username: 'administrator@{{ vcenter.vc_fact_domain }}'
       password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
       validate_certs: false
@@ -99,13 +98,6 @@
 
     - name: Get host facts
       community.vmware.vmware_host_facts:
-        hostname: "{{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
-        username: "administrator@{{ vcenter.vc_fact_domain }}"
-        password: '{{ vcenter.vc_fact_password }}'
-        esxi_hostname: "{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
-        #esxi_hostname: "{{ hostvars[inventory_hostname].ansible_host_ip }}"
-        #esxi_hostname: '{{ inventory_hostname }}'
-        validate_certs: false
       register: host_facts
     
     - debug:
@@ -119,7 +111,6 @@
 
     - name: Gather info about vmhbas of an ESXi Host
       community.vmware.vmware_host_disk_info:
-        esxi_hostname: "{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
       register: host_vmhbas
 
     - set_fact:
@@ -160,7 +151,6 @@
       vmware_host_datastore:
         validate_certs: false
         datastore_name: "Datastore-{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
-        #datastore_name: "Datastore-{{ hostvars[inventory_hostname].ansible_host_ip }}"
         vmfs_device_name: "{{ vmfs_dn }}"
         vmfs_version: 6
         datastore_type: vmfs

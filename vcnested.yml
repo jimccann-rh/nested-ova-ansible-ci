@@ -66,7 +66,7 @@
     - name: Wait for vCenter
       vmware_about_info:
         hostname: '{{ nested_vm.instance.guest.ipAddress }}'
-        username: 'administrator@vsphere.local'
+        username: 'administrator@{{ vcenter.vc_fact_domain }}'
         password: "{{  lookup('ansible.builtin.env', 'VCESXIPASSWORD')  }}"
         validate_certs: no
       retries: 30
@@ -102,7 +102,7 @@
 #          guestinfo.cis.appliance.net.pnid: 'localhost.localdomain' # "{{ vcenter_hostname }}.{{ domain }}" # FQDN of vcenter server
           guestinfo.cis.appliance.root.passwd: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
           guestinfo.cis.vmdir.password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}" # SSO Password for administrator@vsphere.local
-          domain: "vsphere.local"
+          domain: "{{ vcenter.vc_fact_domain }}"
           guestinfo.cis.appliance.ssh.enabled: 'True'
           guestinfo.cis.deployment.autoconfig: 'True' # Auto-configure after deployment
 #      register: nested_vm
@@ -140,7 +140,7 @@
     - name: Wait for vCenter
       vmware_about_info:
         hostname: "{{ hostvars[groups['vc'][my_idx_vc]].NESTEDVMIP }}"
-        username: 'administrator@vsphere.local'
+        username: 'administrator@{{ vcenter.vc_fact_domain }}'
         password: "{{  lookup('ansible.builtin.env', 'VCESXIPASSWORD')  }}"
         validate_certs: no
       retries: 30

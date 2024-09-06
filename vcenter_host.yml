@@ -1,8 +1,8 @@
 #vc_fact_ip: "10.93.60.143"
-vc_fact_hostname: "nested-civcenter"
+#vc_fact_hostname: "nested-civcenter"
+#vc_fact_nameserver: '["10.93.60.129"]'
+#vc_fact_gateway: "10.93.60.129"
 vc_fact_domain: "vsphere.local"
-vc_fact_nameserver: '["10.93.60.129"]'
-vc_fact_gateway: "10.93.60.129"
 vc_fact_ntp: "10.0.77.54"
 vc_fact_password: "{{ lookup('ansible.builtin.env', 'MAINVCESXIPASSWORD') }}"
 vc_fact_datacenter1: "nested-cidatacenter-1"
