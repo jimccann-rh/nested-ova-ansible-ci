@@ -6,9 +6,9 @@ You will need a server to host your ova files via http. I suggest miniserve (htt
 I got my ESXi ova from William Lam (https://williamlam.com/)
 I got my vCenter ova from the vCenter install ISO (download from VMware/Broadcom)
 
-look at file runitall.sh for examples on how to run
+Look at file runitall.sh for examples on how to run
 
-You will need to set up your physical host to have your vswitch or your dvs:
+You will need to set up your physical host to have your vSwitch or your DVS set to:
 Promiscuous mode accept
 MAC address changes accept
 Forged transmits accept
