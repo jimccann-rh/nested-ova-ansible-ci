@@ -1,10 +1,10 @@
 # nested-ova-ansible
 Create a dynamic vsphere setup (using DHCP)
 
-You will need a server to host your ova files via http. I suggest miniserve (https://github.com/svenstaro/miniserve) or you could use some type of s3 bucket. You will also need a DHCP server on your network that you create your nested vSphere in.
+You will need a server to host your OVA files via http. I suggest miniserve (https://github.com/svenstaro/miniserve) or you could use some type of s3 bucket. You will also need a DHCP server on your network that you create your nested vSphere in.
 
-I got my ESXi ova from William Lam (https://williamlam.com/)
-I got my vCenter ova from the vCenter install ISO (download from VMware/Broadcom)
+I got my ESXi OVA from William Lam (https://williamlam.com/)
+I got my vCenter OVA from the vCenter install ISO (download from VMware/Broadcom)
 
 Look at file runitall.sh for examples on how to run
 
