@@ -15,16 +15,6 @@
     msg: "Host: {{ inventory_hostname }}"
   loop: "{{ groups['vc'] }}"
 
-- name: Setting host facts
-  ansible.builtin.set_fact:
-    vmkguest: "vmkernel8Guest"
-  when: '"8" in version'
-
-- name: Setting host facts
-  ansible.builtin.set_fact:
-    vmkguest: "vmkernel7Guest"
-  when: '"7" in version'
-
 - name: Remove vSphere environment
   block:
 

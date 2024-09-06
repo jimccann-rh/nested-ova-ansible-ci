@@ -19,10 +19,6 @@
   ansible.builtin.set_fact:
     host_fact_hostname: "{{ hostvars[groups['esxi'][my_idx]].inventory_hostname }}"
 
-- name: Setting host facts 
-  ansible.builtin.set_fact: 
-    host_fact_name: "{{ hostvars[groups['esxi'][my_idx]].inventory_hostname }}"
-
 - name: Setting host facts
   ansible.builtin.set_fact:
     vmkguest: "vmkernel8Guest"
@@ -37,11 +33,11 @@
   block:
 
 #### TEMP TESTING
-    - name: "DELETE virtual machine {{ host_fact_name }} version {{ version }}"
+    - name: "DELETE virtual machine {{ host_fact_hostname }} version {{ version }}"
       community.vmware.vmware_guest:
         datacenter: "{{ vcenter.vc_datacenter }}"
         folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
-        name: "{{ host_fact_name }}"
+        name: "{{ host_fact_hostname }}"
         state: absent
         force: true
       when: testingesxi | bool 
@@ -64,7 +60,7 @@
 
     - name: Add host to group esxi 
       ansible.builtin.add_host:
-        name: '{{ host_fact_name }}'
+        name: '{{ host_fact_hostname }}'
         groups: esxi
         NESTEDVMIP: "{{ nested_vm.instance.guest.ipAddress }}"
 
@@ -73,7 +69,7 @@
     - community.vmware.vmware_deploy_ovf:
         url: "http://10.93.245.232:8080/{{ esxiova }}"
         datacenter: "{{ vcenter.vc_datacenter }}"
-        name: '{{ host_fact_name }}'
+        name: '{{ host_fact_hostname }}'
         enable_hidden_properties: true
         folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
         datastore: vsanDatastore
@@ -88,16 +84,16 @@
           guestinfo.password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}" # SSO Password for administrator@vsphere.local
 #      register: nested_vm
 
-    - name: "shutdown virtual machine {{ host_fact_name }} version {{ version }}"
+    - name: "shutdown virtual machine {{ host_fact_hostname }} version {{ version }}"
       community.vmware.vmware_guest:
         datacenter: "{{ vcenter.vc_datacenter }}"
         folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
-        name: "{{ host_fact_name }}"
+        name: "{{ host_fact_hostname }}"
         state: shutdownguest
 
     - name: Retrieve guest info
       community.vmware.vmware_guest_info:
-        name: "{{ host_fact_name }}"
+        name: "{{ host_fact_hostname }}"
         datacenter: "{{ vcenter.vc_datacenter }}"
       register: guest_info
       until: guest_info.instance.hw_power_status == "poweredOff"
@@ -119,11 +115,11 @@
             scsi_controller: 0
             unit_number: 2
     
-    - name: "MODIFY cpu/memory virtual machine {{ host_fact_name }} version {{ version }}"
+    - name: "MODIFY cpu/memory virtual machine {{ host_fact_hostname }} version {{ version }}"
       community.vmware.vmware_guest:
         datacenter: "{{ vcenter.vc_datacenter }}"
         folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
-        name: "{{ host_fact_name }}"
+        name: "{{ host_fact_hostname }}"
         state: present
         #state: rebootguest
     #    guest_id: "{{ vmkguest }}"
@@ -139,17 +135,17 @@
     name: "{{ host_fact_hostname }}" 
     state: present
     
-- name: "poweron virtual machine {{ host_fact_name }} version {{ version }}"
+- name: "poweron virtual machine {{ host_fact_hostname }} version {{ version }}"
   community.vmware.vmware_guest:
     datacenter: "{{ vcenter.vc_datacenter }}"
     folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
-    name: "{{ host_fact_name }}"
+    name: "{{ host_fact_hostname }}"
     state: poweredon
   register: presults
 
 - name: Retrieve guest info
   community.vmware.vmware_guest_info:
-    name: "{{ host_fact_name }}"
+    name: "{{ host_fact_hostname }}"
     datacenter: "{{ vcenter.vc_datacenter }}"
   register: guest_info
   until: guest_info.instance.guest_tools_status == "guestToolsRunning"
@@ -170,7 +166,7 @@
 
 - name: Add host to group esxi
   ansible.builtin.add_host:
-    name: '{{ host_fact_name }}'
+    name: '{{ host_fact_hostname }}'
     groups: esxi
     NESTEDVMIP: "{{ nested_vm.instance.guest.ipAddress }}"
 

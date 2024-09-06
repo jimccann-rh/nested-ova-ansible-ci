@@ -27,12 +27,12 @@ time ansible-playbook -i hosts main.yml --extra-var version="8" --extra-var='{"t
 echo "@@@"
 time ansible-playbook -i hosts main.yml --extra-var version="7" --extra-var='{"target_hosts": [nested7-myjobname1-host.vpshere.local]}' --extra-var='{"target_vcs": [nested7-myjobname-VC.vpshere.local]}' --extra-var esximemory="65536" --extra-var esxicpu="16"
 
-echo "@@@ RERUN SCRIPT FOR CONFIRMING ENVIRONMENT"
-
-echo "@@@"
+#echo "@@@ RERUN SCRIPT FOR CONFIRMING ENVIRONMENT"
+#
+#echo "@@@"
 time ansible-playbook -i hosts main.yml --extra-var version="8" --extra-var='{"target_hosts": [nested8-myjobname1-host.vpshere.local,nested8-myjobname2-host.vpshere.local]}' --extra-var='{"target_vcs": [nested8-myjobname-VC.vpshere.local]}' --extra-var esximemory="65536" --extra-var esxicpu="16"
-
-echo "@@@"
+#
+#echo "@@@"
 time ansible-playbook -i hosts main.yml --extra-var version="7" --extra-var='{"target_hosts": [nested7-myjobname1-host.vpshere.local]}' --extra-var='{"target_vcs": [nested7-myjobname-VC.vpshere.local]}' --extra-var esximemory="65536" --extra-var esxicpu="16"
 
 echo "@@@ DONE"

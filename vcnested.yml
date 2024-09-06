@@ -19,10 +19,6 @@
   ansible.builtin.set_fact:
     host_fact_hostname: "{{ hostvars[groups['vc'][my_idx_vc]].inventory_hostname }}"
 
-- name: Setting host facts 
-  ansible.builtin.set_fact: 
-    host_fact_name: "{{ hostvars[groups['vc'][my_idx_vc]].inventory_hostname }}"
-
 - name: Setting host facts
   ansible.builtin.set_fact:
     vmkguest: "vmkernel8Guest"
@@ -38,11 +34,11 @@
   block:
 
 ## TEMP TESTING
-    - name: "DELETE virtual machine {{ host_fact_name }} version {{ version }}"
+    - name: "DELETE virtual machine {{ host_fact_hostname }} version {{ version }}"
       community.vmware.vmware_guest:
         datacenter: "{{ vcenter.vc_datacenter }}"
         folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
-        name: "{{ host_fact_name }}"
+        name: "{{ host_fact_hostname }}"
         state: absent
         force: true
       when: testingvc | bool
@@ -76,7 +72,7 @@
 
     - name: Add host to group vc
       ansible.builtin.add_host:
-        name: '{{ host_fact_name }}'
+        name: '{{ host_fact_hostname }}'
         groups: vc
         NESTEDVMIP: "{{ nested_vm.instance.guest.ipAddress }}"
     
@@ -85,7 +81,7 @@
     - community.vmware.vmware_deploy_ovf:
         url: "http://10.93.245.232:8080/{{ vcenterova }}"
         datacenter: "{{ vcenter.vc_datacenter }}"
-        name: '{{ host_fact_name }}' 
+        name: '{{ host_fact_hostname }}' 
         enable_hidden_properties: true
         folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
         datastore: vsanDatastore
@@ -113,7 +109,7 @@
 
     - name: Retrieve guest info
       community.vmware.vmware_guest_info:
-        name: "{{ host_fact_name }}"
+        name: "{{ host_fact_hostname }}"
         datacenter: "{{ vcenter.vc_datacenter }}"
       register: guest_info
       until: guest_info.instance.guest_tools_status == "guestToolsRunning"
@@ -131,7 +127,7 @@
     
     - name: Add host to group vc
       ansible.builtin.add_host:
-        name: '{{ host_fact_name }}'
+        name: '{{ host_fact_hostname }}'
         groups: vc
         NESTEDVMIP: "{{ nested_vm.instance.guest.ipAddress }}"
 #        NESTEDVMIP: "{{ nested_vm.instance.guest.ipAddress | ipaddress('ipv4') | split(' ')[0] }}"
