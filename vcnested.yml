@@ -101,9 +101,12 @@
           domain: "{{ vcenter.vc_fact_domain }}"
           guestinfo.cis.appliance.ssh.enabled: 'True'
           guestinfo.cis.deployment.autoconfig: 'True' # Auto-configure after deployment
-#      register: nested_vm
+      register: nested_vm
 
-    - name: Pause while vcenter reboots itself (this is to get around the issue of IPv6 address showing up 1st in the vmtools)
+#    - debug:
+#        msg:  "vcenter info is: {{ nested_vm.instance }}"
+
+    - name: Pause while vcenter reboots itself
       pause:
         seconds: 180
 
