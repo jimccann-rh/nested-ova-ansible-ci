@@ -155,7 +155,7 @@
       vars:
         host_fact_name: "{{ hostvars[groups['esxi'][my_idx]].inventory_hostname }}"
 
-    - name:  Deploy ova of VC
+    - name:  Remove VC
       include_tasks: vsphere_remove.yml
       loop: "{{ groups['vc'] | list }}"
       loop_control:
