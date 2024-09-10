@@ -95,7 +95,7 @@
   serial: 1
   vars:
     bootstrap: true
-    nfsetup: false
+    nfsetup: true
     nfsiso: false
     localcy: false
 

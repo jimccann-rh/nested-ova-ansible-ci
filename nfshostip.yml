@@ -1,0 +1,7 @@
+nfserver: 10.93.245.232
+nfsname: 'isos'
+sharepoint: "/data/export/share/"
+nfserver2: 10.93.245.9
+nfsname2: 'dsnested'
+sharepoint2: "/data/export/share/"
+

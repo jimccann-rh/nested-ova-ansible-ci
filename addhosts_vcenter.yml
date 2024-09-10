@@ -172,6 +172,7 @@
         validate_certs: false
       loop:
           - { 'name': '{{ nfsname }}', 'server': '{{ nfserver }}', 'path': '{{ sharepoint }}', 'type': 'nfs41', 'nfs_ro': 'true'}
+          - { 'name': '{{ nfsname2 }}', 'server': '{{ nfserver2 }}', 'path': '{{ sharepoint2 }}', 'type': 'nfs41', 'nfs_ro': 'false'}
       when: nfsetup | bool   
 
     -  name: Enable vMotion for Nested
