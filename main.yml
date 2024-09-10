@@ -166,7 +166,7 @@
 
 
     - debug:
-        msg: "{{ host_fact_name }} VCENTER IP ADDRESS" 
+        msg: "***** {{ host_fact_name }} VCENTER IP ADDRESS *****"
       loop: "{{ groups['vc'] | list }}"
       loop_control:
         loop_var: loop_bms
