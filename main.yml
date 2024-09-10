@@ -164,5 +164,15 @@
       vars:
         host_fact_name: "{{ hostvars[groups['vc'][my_idx]].inventory_hostname }}"
 
+
+    - debug:
+        msg: "{{ host_fact_name }} VCENTER IP ADDRESS" 
+      loop: "{{ groups['vc'] | list }}"
+      loop_control:
+        loop_var: loop_bms
+        index_var: my_idx
+      vars:
+        host_fact_name: "{{ hostvars[groups['vc'][my_idx]]['NESTEDVMIP'] }}"
+
   tags:
     - removevsphere

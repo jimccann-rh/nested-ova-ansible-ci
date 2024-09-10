@@ -7,12 +7,12 @@
 
 - name: List hosts in ESXi
   debug:
-    msg: "Host: {{ inventory_hostname }}"
+    msg: "Host: {{ item }}"
   loop: "{{ groups['esxi'] }}"
 
 - name: List hosts in VC
   debug:
-    msg: "Host: {{ inventory_hostname }}"
+    msg: "Host: {{ item }}"
   loop: "{{ groups['vc'] }}"
 
 - name: Remove vSphere environment
