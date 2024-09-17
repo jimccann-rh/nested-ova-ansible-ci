@@ -67,7 +67,7 @@
   rescue:
 
     - community.vmware.vmware_deploy_ovf:
-        url: "http://10.93.245.232:8080/{{ esxiova }}"
+        url: "http://{{ httpova }}/{{ esxiova }}"
         datacenter: "{{ vcenter.vc_datacenter }}"
         name: '{{ host_fact_hostname }}'
         enable_hidden_properties: true

@@ -18,4 +18,3 @@ vc_password: "{{ lookup('ansible.builtin.env', 'MAINVCPASSWORD') }}"
 vc_datacenter: "cidatacenter-2"
 vc_cluster: "cicluster-3"
 vc_folder: "nested"
-
