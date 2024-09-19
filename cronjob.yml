@@ -1,0 +1,27 @@
+---
+
+- name: Calculate the time 24 hours from now
+  set_fact:
+    cron_time: "{{ lookup('pipe', 'date -d \"+30 minutes\" +\"%M %H %d %m %Y\"') }}"
+    #cron_time: "{{ lookup('pipe', 'date -d \"+1 hours\" +\"%M %H %d %m %Y\"') }}"
+    #cron_time: "{{ lookup('pipe', 'date -d \"+24 hours\" +\"%M %H %d %m %Y\"') }}"
+
+- name: Create the cron job
+  cron:
+    state: present
+    name: "script_cron {{ target_vcs }}"
+    user: "{{ lookup('env', 'USER') }}" 
+    minute: "{{ cron_time.split()[0] }}"
+    hour: "{{ cron_time.split()[1] }}"
+    day: "{{ cron_time.split()[2] }}"
+    month: "{{ cron_time.split()[3] }}"
+    job:  source /root/CI-NESTED/nested.source && cd /root/CI-NESTED/KISS-TEMP-backup/github/ ; ansible-playbook -i hosts main.yml --extra-var cleanupcron=true --extra-var version={{ '"' }}{{ version }}{{ '"' }} --extra-var='{"target_hosts"{{ ":" }} {{ target_hosts}}}' --extra-var='{"target_vcs"{{ ":"}} {{ target_vcs}} }' --extra-var removevsphere=true -t removevsphere >> /tmp/{{ target_vcs | replace('[', '') | replace(']', '') |  regex_replace("'", '')  }}.log 2>&1
+  when: createcron | bool
+
+- name: Remove the cron job
+  cron:
+    state: absent
+    name: "script_cron {{ target_vcs }}"
+  when: cleanupcron | bool
+
+

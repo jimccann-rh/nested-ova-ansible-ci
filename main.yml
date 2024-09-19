@@ -32,7 +32,10 @@
     esximemory: "131072"
     esxicpu: "20"
     testingesxi: false    
-    testingvc: false    
+    testingvc: false 
+#    tempenviro: true 
+#    createcron: false
+#    cleanupcron: false
 
   collections:
     - community.general
@@ -46,6 +49,14 @@
       validate_certs: false
 
   tasks:
+
+#    - block:
+#       - name: Set cron 
+#         include_tasks: cronjob.yml
+##      when: tempenviro | bool
+
+#    - pause:
+#        seconds: 30
 
     - block:
        - name: Needed packages on system
@@ -133,6 +144,9 @@
   gather_facts: true
   vars:
     removevsphere: false
+    createcron: false
+    cleanupcron: false
+
   collections:
     - community.general
     - community.vmware
@@ -164,6 +178,10 @@
       vars:
         host_fact_name: "{{ hostvars[groups['vc'][my_idx]].inventory_hostname }}"
 
+    - block:
+       - name: Set cron
+         include_tasks: cronjob.yml
+#      when: tempenviro | bool
 
     - debug:
         msg: "***** {{ host_fact_name }} VCENTER IP ADDRESS *****"
