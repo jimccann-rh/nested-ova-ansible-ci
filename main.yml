@@ -191,7 +191,8 @@
            name: vcenter
 
        - debug:
-           msg: "***** {{ host_fact_name }} VCENTER IP ADDRESS ***** password is ***** {{ vc_fact_password }} *****"
+           msg: "***** {{ host_fact_name }} VCENTER IP ADDRESS *****"
+           #msg: "***** {{ host_fact_name }} VCENTER IP ADDRESS ***** password is ***** {{ vc_fact_password }} *****"
          loop: "{{ groups['vc'] | list }}"
          loop_control:
            loop_var: loop_bms
