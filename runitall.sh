@@ -42,3 +42,8 @@ echo "@@@ DONE"
 echo "### CRONJOB"
 time ansible-playbook -i hosts main.yml --extra-var createcron=true --extra-var version="8" --extra-var='{"target_hosts": [nested8-myjobname1-host.vpshere.local]}' --extra-var='{"target_vcs": [nested8-myjobname-VC.vpshere.local]}' --extra-var esximemory="65536" --extra-var esxicpu="16"
 
+
+
+
+time ansible-playbook -i hosts main.yml --extra-var vc_fact_password="thepassword" --extra-var createcron=true --extra-var version="8" --extra-var='{"target_hosts": [nested8-myjobname1-host.vpshere.local]}' --extra-var='{"target_vcs": [nested8-myjobname-VC.vpshere.local]}' --extra-var esximemory="65536" --extra-var esxicpu="16"
+

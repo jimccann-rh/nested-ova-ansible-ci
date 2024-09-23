@@ -1,9 +1,9 @@
 ---
 
-- name: Include vars of vcenter_host.yml
-  ansible.builtin.include_vars:
-    file: vcenter_host.yml
-    name: vcenter
+#- name: Include vars of host.yml
+#  ansible.builtin.include_vars:
+#    file: host.yml
+#    name: vcenter
 
 - name: List hosts in ESXi
   debug:
@@ -36,8 +36,8 @@
 ## TEMP TESTING
     - name: "DELETE virtual machine {{ host_fact_hostname }} version {{ version }}"
       community.vmware.vmware_guest:
-        datacenter: "{{ vcenter.vc_datacenter }}"
-        folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
+        datacenter: "{{ vc_datacenter }}"
+        folder: "{{ vc_datacenter }}/vm/{{ vc_folder }}"
         name: "{{ host_fact_hostname }}"
         state: absent
         force: true
@@ -45,14 +45,14 @@
 
     - name: "Does VC virtual machine {{ host_fact_hostname }} exist"
       community.vmware.vmware_guest:
-        datacenter: "{{ vcenter.vc_datacenter }}"
-        folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
+        datacenter: "{{ vc_datacenter }}"
+        folder: "{{ vc_datacenter }}/vm/{{ vc_folder }}"
         name: "{{ host_fact_hostname }}"
         state: present
 
     - name: "Does VC virtual machine {{ host_fact_hostname }} exist get ip"
       community.vmware.vmware_guest_info:
-        datacenter: "{{ vcenter.vc_datacenter }}"
+        datacenter: "{{ vc_datacenter }}"
         name: "{{ host_fact_hostname }}"
         schema: vsphere
         properties:
@@ -62,8 +62,9 @@
     - name: Wait for vCenter
       vmware_about_info:
         hostname: '{{ nested_vm.instance.guest.ipAddress }}'
-        username: 'administrator@{{ vcenter.vc_fact_domain }}'
-        password: "{{  lookup('ansible.builtin.env', 'VCESXIPASSWORD')  }}"
+        username: 'administrator@{{ vc_fact_domain }}'
+        #password: "{{  lookup('ansible.builtin.env', 'VCESXIPASSWORD')  }}"
+        password: "{{ vc_fact_password }}"
         validate_certs: no
       retries: 30
       delay: 60
@@ -80,14 +81,14 @@
 
     - community.vmware.vmware_deploy_ovf:
         url: "http://{{ httpova }}/{{ vcenterova }}"
-        datacenter: "{{ vcenter.vc_datacenter }}"
+        datacenter: "{{ vc_datacenter }}"
         name: '{{ host_fact_hostname }}' 
         enable_hidden_properties: true
-        folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
+        folder: "{{ vc_datacenter }}/vm/{{ vc_folder }}"
         datastore: vsanDatastore
         disk_provisioning: thin
         networks:
-            "Network 1": "{{ vcenter.vc_fact_deployment_network }}"
+            "Network 1": "{{ vc_fact_deployment_network }}"
         wait_for_ip_address: true
         validate_certs: no
         inject_ovf_env: true
@@ -95,25 +96,27 @@
           DeploymentOption.value: 'tiny' # vCenter t-shirt size: tiny,small,medium,large, or infrastructure 
           guestinfo.cis.appliance.net.addr.family: 'ipv4' # ipv4 or ipv6
           guestinfo.cis.appliance.net.mode: 'dhcp' # static or dhcp
-#          guestinfo.cis.appliance.net.pnid: 'localhost.localdomain' # "{{ vcenter_hostname }}.{{ domain }}" # FQDN of vcenter server
-          guestinfo.cis.appliance.root.passwd: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
-          guestinfo.cis.vmdir.password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}" # SSO Password for administrator@vsphere.local
-          domain: "{{ vcenter.vc_fact_domain }}"
+#          guestinfo.cis.appliance.net.pnid: 'localhost.localdomain' # "{{ hostname }}.{{ domain }}" # FQDN of server
+          #guestinfo.cis.appliance.root.passwd: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
+          guestinfo.cis.appliance.root.passwd: "{{ vc_fact_password }}"
+          #guestinfo.cis.vmdir.password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}" # SSO Password for administrator@vsphere.local
+          guestinfo.cis.vmdir.password: "{{ vc_fact_password }}" # SSO Password for administrator@vsphere.local
+          domain: "{{ vc_fact_domain }}"
           guestinfo.cis.appliance.ssh.enabled: 'True'
           guestinfo.cis.deployment.autoconfig: 'True' # Auto-configure after deployment
       register: nested_vm
 
 #    - debug:
-#        msg:  "vcenter info is: {{ nested_vm.instance }}"
+#        msg:  "info is: {{ nested_vm.instance }}"
 
-    - name: Pause while vcenter reboots itself
+    - name: Pause while reboots itself
       pause:
         seconds: 180
 
     - name: Retrieve guest info
       community.vmware.vmware_guest_info:
         name: "{{ host_fact_hostname }}"
-        datacenter: "{{ vcenter.vc_datacenter }}"
+        datacenter: "{{ vc_datacenter }}"
       register: guest_info
       until: guest_info.instance.guest_tools_status == "guestToolsRunning"
       retries: 60
@@ -121,7 +124,7 @@
 
     - name: "Does VC virtual machine {{ host_fact_hostname }} exist get ip"
       community.vmware.vmware_guest_info:
-        datacenter: "{{ vcenter.vc_datacenter }}"
+        datacenter: "{{ vc_datacenter }}"
         name: "{{ host_fact_hostname }}"
         schema: vsphere
         properties:
@@ -137,13 +140,14 @@
     #    DC: "1"
 
     - debug:
-        msg:  "vcenter ip is: {{ nested_vm.instance }}"
+        msg:  "ip is: {{ nested_vm.instance }}"
 
     - name: Wait for vCenter
       vmware_about_info:
         hostname: "{{ hostvars[groups['vc'][my_idx_vc]].NESTEDVMIP }}"
-        username: 'administrator@{{ vcenter.vc_fact_domain }}'
-        password: "{{  lookup('ansible.builtin.env', 'VCESXIPASSWORD')  }}"
+        username: 'administrator@{{ vc_fact_domain }}'
+        #password: "{{  lookup('ansible.builtin.env', 'VCESXIPASSWORD')  }}"
+        password: "{{ vc_fact_password }}"
         validate_certs: no
       retries: 30
       delay: 60

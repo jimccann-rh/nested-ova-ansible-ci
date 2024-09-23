@@ -1,6 +1,7 @@
 ---
 
 - hosts: localhost
+  connection: local
   become: false
   gather_facts: false
 
@@ -146,6 +147,7 @@
     removevsphere: false
     createcron: false
     cleanupcron: false
+    showinfo: true
 
   collections:
     - community.general
@@ -182,15 +184,21 @@
        - name: Set cron
          include_tasks: cronjob.yml
 #      when: tempenviro | bool
+    - block:
+       - name: Include vars of vcenter_host.yml
+         ansible.builtin.include_vars:
+           file: vcenter_host.yml
+           name: vcenter
 
-    - debug:
-        msg: "***** {{ host_fact_name }} VCENTER IP ADDRESS *****"
-      loop: "{{ groups['vc'] | list }}"
-      loop_control:
-        loop_var: loop_bms
-        index_var: my_idx
-      vars:
-        host_fact_name: "{{ hostvars[groups['vc'][my_idx]]['NESTEDVMIP'] }}"
+       - debug:
+           msg: "***** {{ host_fact_name }} VCENTER IP ADDRESS ***** password is ***** {{ vc_fact_password }} *****"
+         loop: "{{ groups['vc'] | list }}"
+         loop_control:
+           loop_var: loop_bms
+           index_var: my_idx
+         vars:
+           host_fact_name: "{{ hostvars[groups['vc'][my_idx]]['NESTEDVMIP'] }}"
+      when: showinfo | bool
 
   tags:
     - removevsphere

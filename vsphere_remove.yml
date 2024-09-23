@@ -1,9 +1,9 @@
 ---
 
-- name: Include vars of vcenter_host.yml
-  ansible.builtin.include_vars:
-    file: vcenter_host.yml
-    name: vcenter
+#- name: Include vars of host.yml
+#  ansible.builtin.include_vars:
+#    file: host.yml
+#    name: vcenter
 
 - name: List hosts in ESXi
   debug:
@@ -20,8 +20,8 @@
 
     - name: "DELETE virtual machine {{ host_fact_name }} version {{ version }}"
       community.vmware.vmware_guest:
-        datacenter: "{{ vcenter.vc_datacenter }}"
-        folder: "{{ vcenter.vc_datacenter }}/vm/{{ vcenter.vc_folder }}"
+        datacenter: "{{ vc_datacenter }}"
+        folder: "{{ vc_datacenter }}/vm/{{ vc_folder }}"
         name: "{{ host_fact_name }}"
         state: absent
         force: true

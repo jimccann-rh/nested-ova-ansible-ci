@@ -4,7 +4,6 @@
 #vc_fact_gateway: "10.93.60.129"
 vc_fact_domain: "vsphere.local"
 vc_fact_ntp: "10.0.77.54"
-#vc_fact_password: "{{ lookup('community.general.random_string', length=16, special=True) }}"
 vc_fact_password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
 vc_fact_datacenter1: "nested-cidatacenter-1"
 vc_fact_datacenter2: "nested-cidatacenter-2"

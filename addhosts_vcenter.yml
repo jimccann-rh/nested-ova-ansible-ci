@@ -1,9 +1,9 @@
 ---
 
-- name: Include vars of vcenter_host.yml
-  ansible.builtin.include_vars:
-    file: vcenter_host.yml
-    name: vcenter
+#- name: Include vars of host.yml
+#  ansible.builtin.include_vars:
+#    file: host.yml
+#    name: vcenter
 
 - name: List hosts in ESXi
   debug:
@@ -15,6 +15,10 @@
     msg: "Host: {{ item }}"
   loop: "{{ groups['vc'] }}"
 
+
+#- pause:
+
+
 #- name: vCenter tweaks
 - block:
     - name: Create Datacenter
@@ -22,21 +26,21 @@
         datacenter_name: '{{ item }}'
         state: present
       loop:
-        - '{{ vcenter.vc_fact_datacenter1 }}'
-#        - '{{ vcenter.vc_fact_datacenter2 }}'
+        - '{{ vc_fact_datacenter1 }}'
+#        - '{{ vc_fact_datacenter2 }}'
     
     - name: Create Cluster
       community.vmware.vmware_cluster:
         datacenter_name: '{{ item.datacenter }}'
         cluster_name: '{{ item.cluster }}'
       loop:
-        - { 'cluster': '{{ vcenter.vc_fact_cluster1 }}', 'datacenter': '{{ vcenter.vc_fact_datacenter1  }}' }
-#        - { 'cluster': '{{ vcenter.vc_fact_cluster2 }}', 'datacenter': '{{ vcenter.vc_fact_datacenter2  }}' }
+        - { 'cluster': '{{ vc_fact_cluster1 }}', 'datacenter': '{{ vc_fact_datacenter1  }}' }
+#        - { 'cluster': '{{ vc_fact_cluster2 }}', 'datacenter': '{{ vc_fact_datacenter2  }}' }
 
     - name: Enable DRS and set default VM behavior to fully automated
       community.vmware.vmware_cluster_drs:
-        datacenter: '{{ vcenter.vc_fact_datacenter1 }}'
-        cluster_name: '{{ vcenter.vc_fact_cluster1 }}'
+        datacenter: '{{ vc_fact_datacenter1 }}'
+        cluster_name: '{{ vc_fact_cluster1 }}'
         enable: True
         drs_default_vm_behavior: fullyAutomated
         #drs_default_vm_behavior: partiallyAutomated
@@ -46,8 +50,8 @@
 
     - name: Enable HA without admission control
       community.vmware.vmware_cluster_ha:
-        datacenter: '{{ vcenter.vc_fact_datacenter1 }}'
-        cluster_name: '{{ vcenter.vc_fact_cluster1 }}'
+        datacenter: '{{ vc_fact_datacenter1 }}'
+        cluster_name: '{{ vc_fact_cluster1 }}'
         enable: true
         advanced_settings: "{{ advs }}"
 
@@ -55,8 +59,9 @@
   module_defaults:
     group/vmware:
       hostname: "{{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
-      username: 'administrator@{{ vcenter.vc_fact_domain }}'
-      password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
+      username: 'administrator@{{ vc_fact_domain }}'
+      #password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
+      password: "{{ vc_fact_password }}"
       validate_certs: false
 
 
@@ -65,18 +70,19 @@
 
     - name: "Add ESXi Host {{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }} to vCenter {{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
       community.vmware.vmware_host:
-        datacenter: "{{ vcenter.vc_fact_datacenter1 }}"
-        cluster: "{{ vcenter.vc_fact_cluster1 }}"
+        datacenter: "{{ vc_fact_datacenter1 }}"
+        cluster: "{{ vc_fact_cluster1 }}"
         #esxi_hostname: "{{ hostvars[inventory_hostname].ansible_host_ip }}"
         esxi_username: "root"
-        esxi_password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
+        #esxi_password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
+        esxi_password: "{{ vc_fact_password }}"
         state: present
 #      when: '"1" in hostvars[groups["esxi"][my_idx]].DC | string'
 
 #    - name: "Add ESXi Host {{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }} to vCenter {{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
 #      community.vmware.vmware_host:
-#        datacenter: "{{ vcenter.vc_fact_datacenter2 }}"
-#        cluster: "{{ vcenter.vc_fact_cluster2 }}"
+#        datacenter: "{{ vc_fact_datacenter2 }}"
+#        cluster: "{{ vc_fact_cluster2 }}"
 #        #esxi_hostname: "{{ hostvars[inventory_hostname].ansible_host_ip }}"
 #        esxi_username: "root"
 #        esxi_password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
@@ -85,7 +91,7 @@
 
     - name: Set the Power Management Policy of all host systems from cluster to high-performance
       community.vmware.vmware_host_powermgmt_policy:
-        cluster_name: '{{ vcenter.vc_fact_cluster1 }}'
+        cluster_name: '{{ vc_fact_cluster1 }}'
         policy: high-performance
     
     - name: Update for system defaults config
@@ -106,7 +112,7 @@
 
     - name: Rescan HBA's for a given cluster - all found hosts will be scanned
       community.vmware.vmware_host_scanhba:
-        cluster_name: '{{ vcenter.vc_fact_cluster1 }}'
+        cluster_name: '{{ vc_fact_cluster1 }}'
         refresh_storage: true
 
     - name: Gather info about vmhbas of an ESXi Host
@@ -156,6 +162,12 @@
         datastore_type: vmfs
         state: present
 
+#    - name: Set Allowed vCLS Datastores
+#      community.vmware.vmware_cluster_vcls:
+#        datacenter: '{{ vc_fact_datacenter1 }}'
+#        cluster_name: '{{ vc_fact_cluster1 }}'
+#        allowed_datastores: "Datastore-{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
+
     - name: Include vars nfs
       ansible.builtin.include_vars:
         file: nfshostip.yml
@@ -191,12 +203,27 @@
         state: absent
 
   ignore_errors: true
-  delegate_to: localhost
+  #delegate_to: localhost
   module_defaults:
     group/vmware:
       hostname: "{{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
-      username: 'administrator@{{ vcenter.vc_fact_domain }}'
-      password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
+      username: 'administrator@{{ vc_fact_domain }}'
+      #password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
+      password: "{{ vc_fact_password }}"
       esxi_hostname: "{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
       validate_certs: false
 
+
+- name: Set Allowed vCLS Datastores
+  community.vmware.vmware_cluster_vcls:
+    hostname: "{{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
+    password: "{{ vc_fact_password }}"
+    username: 'administrator@{{ vc_fact_domain }}'
+    validate_certs: false
+    datacenter: '{{ vc_fact_datacenter1 }}'
+    cluster_name: '{{ vc_fact_cluster1 }}'
+    allowed_datastores: "Datastore-{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
+#    allowed_datastores: 
+#      - "Datastore-10.93.60.221"
+##      - "{{ vmfs_dn }}"
+#- pause:
