@@ -185,10 +185,10 @@
          include_tasks: cronjob.yml
 #      when: tempenviro | bool
     - block:
-       - name: Include vars of vcenter_host.yml
-         ansible.builtin.include_vars:
-           file: vcenter_host.yml
-           name: vcenter
+#       - name: Include vars of vcenter_host.yml
+#         ansible.builtin.include_vars:
+#           file: vcenter_host.yml
+#           name: vcenter
 
        - debug:
            msg: "***** {{ host_fact_name }} VCENTER IP ADDRESS *****"
