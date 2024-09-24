@@ -59,6 +59,9 @@
           - guest.ipAddress
       register: nested_vm
 
+    - debug:
+        msg:  "ip is: {{ nested_vm.instance.guest.ipAddress }}"
+
     - name: Wait for vCenter
       vmware_about_info:
         hostname: '{{ nested_vm.instance.guest.ipAddress }}'
