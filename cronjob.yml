@@ -10,8 +10,8 @@
   cron:
     state: present
     name: "script_cron {{ target_vcs }}"
-    user: "{{ ansible_user }}" 
-    #user: "{{ lookup('env', 'USER') }}" 
+    #user: "{{ ansible_user }}" 
+    user: "{{ lookup('env', 'USER') }}" 
     minute: "{{ cron_time.split()[0] }}"
     hour: "{{ cron_time.split()[1] }}"
     day: "{{ cron_time.split()[2] }}"
