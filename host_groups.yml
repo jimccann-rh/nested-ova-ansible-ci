@@ -1,0 +1,20 @@
+---
+- block:
+  - name: "Create DRS Host group"
+    community.vmware.vmware_drs_group:
+      cluster_name: "{{ vc_host_groups.cluster }}"
+      datacenter_name: "{{ vc_host_groups.datacenter }}"
+      group_name: "{{ item }}"
+      hosts:
+      - "{{ hostvars[groups['esxi'][idx]].NESTEDVMIP }}"      
+      state: present
+    loop: "{{ vc_host_groups.groups }}"
+    loop_control:
+      index_var: idx    
+
+  module_defaults:
+    group/vmware:
+      hostname: "{{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
+      username: 'administrator@{{ vc_fact_domain }}'
+      password: "{{ vc_fact_password }}"
+      validate_certs: false
