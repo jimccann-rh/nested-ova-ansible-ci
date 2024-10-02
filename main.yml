@@ -34,9 +34,6 @@
     esxicpu: "20"
     testingesxi: false    
     testingvc: false 
-#    tempenviro: true 
-#    createcron: false
-#    cleanupcron: false
 
   collections:
     - community.general
@@ -50,15 +47,6 @@
       validate_certs: false
 
   tasks:
-
-#    - block:
-#       - name: Set cron 
-#         include_tasks: cronjob.yml
-##      when: tempenviro | bool
-
-#    - pause:
-#        seconds: 30
-
     - block:
        - name: Needed packages on system
          include_tasks: packlocal.yml
@@ -130,12 +118,16 @@
 
        - name: Add dvs to vcenter and add host to dvs
          include_tasks: dvs_hosts_vcenter.yml
-         #when: '"1" in DC | string'
          loop: "{{ groups['esxi'] | list }}"
          loop_control:
            loop_var: loop_bms
            index_var: my_idx
 
+       - name: Create tag categories in nested vCenter
+         include_tasks: tagging.yml
+
+       - name: Assign hosts to host groups
+         include_tasks: host_groups.yml
       tags:
        - vcenterhost
 
@@ -183,16 +175,10 @@
     - block:
        - name: Set cron
          include_tasks: cronjob.yml
-#      when: tempenviro | bool
     - block:
-#       - name: Include vars of vcenter_host.yml
-#         ansible.builtin.include_vars:
-#           file: vcenter_host.yml
-#           name: vcenter
 
        - debug:
            msg: "***** {{ host_fact_name }} VCENTER IP ADDRESS *****"
-           #msg: "***** {{ host_fact_name }} VCENTER IP ADDRESS ***** password is ***** {{ vc_fact_password }} *****"
          loop: "{{ groups['vc'] | list }}"
          loop_control:
            loop_var: loop_bms

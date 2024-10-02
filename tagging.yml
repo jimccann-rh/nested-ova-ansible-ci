@@ -1,0 +1,57 @@
+---
+- block:
+  - name: Create a zone tag category in nested vCenter
+    community.vmware.vmware_category:
+      validate_certs: no
+      category_name: "openshift-zone"
+      category_description: "Zone tags"
+      category_cardinality: "single"
+      associable_object_types:
+        - "Host"
+        - "Cluster"
+
+  - name: Create a region tag category in nested vCenter
+    community.vmware.vmware_category:
+      validate_certs: no
+      category_name: "openshift-region"
+      category_description: "Region tags"
+      category_cardinality: "single"
+      associable_object_types:
+        - "Datacenter"
+  
+  - name: Create region tags
+    community.vmware.vmware_tag:
+      category_name: "openshift-region"
+      tag_name: "{{ item }}"
+    loop: "{{ vc_region_tags }}"
+
+  - name: Create zone tags
+    community.vmware.vmware_tag:
+      category_name: "openshift-zone"
+      tag_name: "{{ item }}"
+    loop: "{{ vc_zone_tags }}"
+
+  - name: Assign region tags
+    community.vmware.vmware_tag_manager:
+      object_name: "{{ item.object_name }}"
+      object_type: "{{ item.object_type }}"
+      tag_names: 
+      - "{{ item.tag }}"
+    loop: "{{ vc_tag_association }}"
+
+  - name: Assign host tags
+    community.vmware.vmware_tag_manager:
+      object_name: "{{ hostvars[groups['esxi'][idx]].NESTEDVMIP }}"
+      object_type: "HostSystem"
+      tag_names: 
+      - "{{ item }}"
+    loop: "{{ vc_host_tags }}"
+    loop_control:
+      index_var: idx
+
+  module_defaults:
+    group/vmware:
+      hostname: "{{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
+      username: 'administrator@{{ vc_fact_domain }}'
+      password: "{{ vc_fact_password }}"
+      validate_certs: false
