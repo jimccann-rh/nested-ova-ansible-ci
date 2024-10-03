@@ -1,18 +1,19 @@
 vc_fact_domain: "vsphere.local"
 vc_fact_ntp: "10.0.77.54"
-vc_fact_password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
-vc_fact_datacenter1: "nested-cidatacenter-1"
-vc_fact_datacenter2: "nested-cidatacenter-2"
-vc_fact_cluster1: "nested-cicluster-1"
+vc_fact_password: "{{ lookup('ansible.builtin.env', 'NESTED_PASSWORD') }}"
+vc_fact_datacenter1: "{{ lookup('ansible.builtin.env', 'NESTED_DATACENTER') }}"
+
+vc_fact_datacenter2: "nested-cidatacenter"
+vc_fact_cluster1: "{{ lookup('ansible.builtin.env', 'NESTED_CLUSTER') }}"
 vc_fact_cluster2: "nested-cicluster-2"
-vc_fact_deployment_network: "ci-vlan-981-testing"
-vc_fact_deployment_network2: "ci-vlan-981-testing"
+vc_fact_deployment_network: "{{ lookup('ansible.builtin.env', 'GOVC_NETWORK') }}"
+vc_fact_deployment_network2: ""
 # below is for nested and is the real vCenter to deploy the nested vc to
 vc_hostname: "{{ lookup('ansible.builtin.env', 'MAINVCHOSTNAME') }}"
 vc_username: "{{ lookup('ansible.builtin.env', 'MAINVCUSERNAME') }}"
 vc_password: "{{ lookup('ansible.builtin.env', 'MAINVCPASSWORD') }}"
-vc_datacenter: "cidatacenter-2"
-vc_cluster: "cicluster-3"
+vc_datacenter: "{{ lookup('ansible.builtin.env', 'GOVC_DATACENTER') }}"
+vc_cluster: "{{ lookup('ansible.builtin.env', 'GOVC_CLUSTER') }}"
 vc_folder: "nested"
 
 # defines tags to be associated with a region, which is a datacenter.
@@ -34,7 +35,7 @@ vc_tag_association:
  -  {
       tag: "us-east",
       object_type: "Datacenter",
-      object_name: "nested-cidatacenter-1"
+      object_name: "{{ lookup('ansible.builtin.env', 'NESTED_DATACENTER') }}"
     }
 
 # when defined, each of the tag names will be associated with 
@@ -48,8 +49,8 @@ vc_host_tags:
 # below. a single host will be placed in each host group. The number of
 # hosts and host groups should be same.
 vc_host_groups:
- cluster: nested-cicluster-1
- datacenter: nested-cidatacenter-1
+ cluster: "{{ lookup('ansible.builtin.env', 'NESTED_CLUSTER') }}"
+ datacenter: "{{ lookup('ansible.builtin.env', 'NESTED_DATACENTER') }}"
  groups:
   - host-group-1
   - host-group-2
