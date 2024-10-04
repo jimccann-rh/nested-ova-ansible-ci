@@ -13,6 +13,10 @@ Promiscuous mode accept
 MAC address changes accept
 Forged transmits accept
 
+
+In a DVS you can setup MAC learning to ALLOW. But you also need to enable Forge Transmits to accept.
+
+
 Also if you are running on top of a vSAN don't forget this:  esxcli system settings advanced set -o /VSAN/FakeSCSIReservations -i 1
 
 
