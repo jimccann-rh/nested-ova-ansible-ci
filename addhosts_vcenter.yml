@@ -1,10 +1,5 @@
 ---
 
-#- name: Include vars of host.yml
-#  ansible.builtin.include_vars:
-#    file: host.yml
-#    name: vcenter
-
 - name: List hosts in ESXi
   debug:
     msg: "Host: {{ item }}"
@@ -15,11 +10,6 @@
     msg: "Host: {{ item }}"
   loop: "{{ groups['vc'] }}"
 
-
-#- pause:
-
-
-#- name: vCenter tweaks
 - block:
     - name: Create Datacenter
       community.vmware.vmware_datacenter:
@@ -28,7 +18,7 @@
       loop:
         - '{{ vc_fact_datacenter1 }}'
 #        - '{{ vc_fact_datacenter2 }}'
-    
+
     - name: Create Cluster
       community.vmware.vmware_cluster:
         datacenter_name: '{{ item.datacenter }}'
@@ -41,9 +31,8 @@
       community.vmware.vmware_cluster_drs:
         datacenter: '{{ vc_fact_datacenter1 }}'
         cluster_name: '{{ vc_fact_cluster1 }}'
-        enable: True
+        enable: true
         drs_default_vm_behavior: fullyAutomated
-        #drs_default_vm_behavior: partiallyAutomated
 
     - set_fact:
         advs: { "das.ignoreInsufficientHbDatastore": "True", "das.ignoreRedundantNetWarning": "True" }
@@ -60,40 +49,24 @@
     group/vmware:
       hostname: "{{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
       username: 'administrator@{{ vc_fact_domain }}'
-      #password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
       password: "{{ vc_fact_password }}"
       validate_certs: false
 
-
-#- name: ESXi tweaks 
 - block:
 
     - name: "Add ESXi Host {{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }} to vCenter {{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
       community.vmware.vmware_host:
         datacenter: "{{ vc_fact_datacenter1 }}"
         cluster: "{{ vc_fact_cluster1 }}"
-        #esxi_hostname: "{{ hostvars[inventory_hostname].ansible_host_ip }}"
         esxi_username: "root"
-        #esxi_password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
         esxi_password: "{{ vc_fact_password }}"
         state: present
-#      when: '"1" in hostvars[groups["esxi"][my_idx]].DC | string'
-
-#    - name: "Add ESXi Host {{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }} to vCenter {{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
-#      community.vmware.vmware_host:
-#        datacenter: "{{ vc_fact_datacenter2 }}"
-#        cluster: "{{ vc_fact_cluster2 }}"
-#        #esxi_hostname: "{{ hostvars[inventory_hostname].ansible_host_ip }}"
-#        esxi_username: "root"
-#        esxi_password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
-#        state: present
-#      when: '"2" in hostvars[groups["esxi"][my_idx]].DC | string'
 
     - name: Set the Power Management Policy of all host systems from cluster to high-performance
       community.vmware.vmware_host_powermgmt_policy:
         cluster_name: '{{ vc_fact_cluster1 }}'
         policy: high-performance
-    
+
     - name: Update for system defaults config
       community.vmware.vmware_host_auto_start:
         system_defaults:
@@ -105,10 +78,10 @@
     - name: Get host facts
       community.vmware.vmware_host_facts:
       register: host_facts
-    
+
     - debug:
         msg:
-         - "{{ host_facts }}"
+          - "{{ host_facts }}"
 
     - name: Rescan HBA's for a given cluster - all found hosts will be scanned
       community.vmware.vmware_host_scanhba:
@@ -120,28 +93,25 @@
       register: host_vmhbas
 
     - set_fact:
-         esxip: "{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
+        esxip: "{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
 
     - debug:
         msg:
-         - "{{ host_vmhbas.hosts_disk_info }}"
-         - "{{ esxip }}"
+          - "{{ host_vmhbas.hosts_disk_info }}"
+          - "{{ esxip }}"
 
     - set_fact:
-         vmhbainfo: "{{ host_vmhbas['hosts_disk_info'][esxip] }}"
+        vmhbainfo: "{{ host_vmhbas['hosts_disk_info'][esxip] }}"
 
     - debug:
         msg:
-         - "{{ vmhbainfo }}"
+          - "{{ vmhbainfo }}"
 
     - name: Find disk by device_ctd
       debug:
         msg: "Disk {{ item.canonical_name }} matches vmhba0:C0:T2:L0"
       loop: "{{ vmhbainfo }}"
       when: item.device_ctd_list[0] == "vmhba0:C0:T2:L0"
-      #when: item.device_ctd_list
-      #when: item.device_ctd_list.contains("vmhba0:C0:T2:L0")
-
 
     - name: Set disk by device_ctd
       set_fact:
@@ -162,16 +132,10 @@
         datastore_type: vmfs
         state: present
 
-#    - name: Set Allowed vCLS Datastores
-#      community.vmware.vmware_cluster_vcls:
-#        datacenter: '{{ vc_fact_datacenter1 }}'
-#        cluster_name: '{{ vc_fact_cluster1 }}'
-#        allowed_datastores: "Datastore-{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
-
     - name: Include vars nfs
       ansible.builtin.include_vars:
         file: nfshostip.yml
-      when: nfsetup | bool   
+      when: nfsetup | bool
 
     - name: Mount NFS datastores to NESTED ESXi
       community.vmware.vmware_host_datastore:
@@ -183,32 +147,30 @@
         state: present
         validate_certs: false
       loop:
-          - { 'name': '{{ nfsname }}', 'server': '{{ nfserver }}', 'path': '{{ sharepoint }}', 'type': 'nfs41', 'nfs_ro': 'true'}
-          - { 'name': '{{ nfsname2 }}', 'server': '{{ nfserver2 }}', 'path': '{{ sharepoint2 }}', 'type': 'nfs41', 'nfs_ro': 'false'}
-      when: nfsetup | bool   
+        - { 'name': '{{ nfsname }}', 'server': '{{ nfserver }}', 'path': '{{ sharepoint }}', 'type': 'nfs41', 'nfs_ro': 'true'}
+        - { 'name': '{{ nfsname2 }}', 'server': '{{ nfserver2 }}', 'path': '{{ sharepoint2 }}', 'type': 'nfs41', 'nfs_ro': 'false'}
+      when: nfsetup | bool
 
-    -  name: Enable vMotion for Nested
-       community.vmware.vmware_vmkernel:
-         vswitch_name: vSwitch0
-         portgroup_name: "Management Network"
-         enable_vmotion: true
-         enable_mgmt: true
-         device: vmk0
-         network:
-           type: 'dhcp'
- 
+    - name: Enable vMotion for Nested
+      community.vmware.vmware_vmkernel:
+        vswitch_name: vSwitch0
+        portgroup_name: "Management Network"
+        enable_vmotion: true
+        enable_mgmt: true
+        device: vmk0
+        network:
+          type: 'dhcp'
+
     - name: Exit Maintenance Mode
       community.vmware.vmware_maintenancemode:
         timeout: 3600
         state: absent
 
   ignore_errors: true
-  #delegate_to: localhost
   module_defaults:
     group/vmware:
       hostname: "{{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
       username: 'administrator@{{ vc_fact_domain }}'
-      #password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
       password: "{{ vc_fact_password }}"
       esxi_hostname: "{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
       validate_certs: false
@@ -223,7 +185,3 @@
     datacenter: '{{ vc_fact_datacenter1 }}'
     cluster_name: '{{ vc_fact_cluster1 }}'
     allowed_datastores: "Datastore-{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
-#    allowed_datastores: 
-#      - "Datastore-10.93.60.221"
-##      - "{{ vmfs_dn }}"
-#- pause:

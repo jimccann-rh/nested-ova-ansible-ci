@@ -7,7 +7,7 @@
 
   tasks:
 
-    - name: Add host to group esxi 
+    - name: Add host to group esxi
       ansible.builtin.add_host:
         name: '{{ item }}'
         groups: esxi
@@ -32,11 +32,8 @@
     version: "7"
     esximemory: "131072"
     esxicpu: "20"
-    testingesxi: false    
-    testingvc: false 
-#    tempenviro: true 
-#    createcron: false
-#    cleanupcron: false
+    testingesxi: false
+    testingvc: false
 
   collections:
     - community.general
@@ -50,14 +47,6 @@
       validate_certs: false
 
   tasks:
-
-#    - block:
-#       - name: Set cron 
-#         include_tasks: cronjob.yml
-##      when: tempenviro | bool
-
-#    - pause:
-#        seconds: 30
 
     - block:
        - name: Needed packages on system

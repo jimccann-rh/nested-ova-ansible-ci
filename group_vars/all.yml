@@ -1,7 +1,3 @@
-#vc_fact_ip: "10.93.60.143"
-#vc_fact_hostname: "nested-civcenter"
-#vc_fact_nameserver: '["10.93.60.129"]'
-#vc_fact_gateway: "10.93.60.129"
 vc_fact_domain: "vsphere.local"
 vc_fact_ntp: "10.0.77.54"
 vc_fact_password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
@@ -10,7 +6,7 @@ vc_fact_datacenter2: "nested-cidatacenter-2"
 vc_fact_cluster1: "nested-cicluster-1"
 vc_fact_cluster2: "nested-cicluster-2"
 vc_fact_deployment_network: "ci-vlan-981-testing"
-vc_fact_deployment_network2: "ci-vlan-896-test"
+vc_fact_deployment_network2: "ci-vlan-981-testing"
 # below is for nested and is the real vCenter to deploy the nested vc to
 vc_hostname: "{{ lookup('ansible.builtin.env', 'MAINVCHOSTNAME') }}"
 vc_username: "{{ lookup('ansible.builtin.env', 'MAINVCUSERNAME') }}"

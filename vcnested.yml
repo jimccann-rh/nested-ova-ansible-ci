@@ -1,10 +1,5 @@
 ---
 
-#- name: Include vars of host.yml
-#  ansible.builtin.include_vars:
-#    file: host.yml
-#    name: vcenter
-
 - name: List hosts in ESXi
   debug:
     msg: "Host: {{ item }}"
@@ -33,7 +28,6 @@
 - name: VC Exists
   block:
 
-## TEMP TESTING
     - name: "DELETE virtual machine {{ host_fact_hostname }} version {{ version }}"
       community.vmware.vmware_guest:
         datacenter: "{{ vc_datacenter }}"
@@ -60,15 +54,14 @@
       register: nested_vm
 
     - debug:
-        msg:  "ip is: {{ nested_vm.instance.guest.ipAddress }}"
+        msg: "ip is: {{ nested_vm.instance.guest.ipAddress }}"
 
     - name: Wait for vCenter
       vmware_about_info:
         hostname: '{{ nested_vm.instance.guest.ipAddress }}'
         username: 'administrator@{{ vc_fact_domain }}'
-        #password: "{{  lookup('ansible.builtin.env', 'VCESXIPASSWORD')  }}"
         password: "{{ vc_fact_password }}"
-        validate_certs: no
+        validate_certs: false
       retries: 30
       delay: 60
       register: result
@@ -79,38 +72,31 @@
         name: '{{ host_fact_hostname }}'
         groups: vc
         NESTEDVMIP: "{{ nested_vm.instance.guest.ipAddress }}"
-    
   rescue:
 
     - community.vmware.vmware_deploy_ovf:
         url: "http://{{ httpova }}/{{ vcenterova }}"
         datacenter: "{{ vc_datacenter }}"
-        name: '{{ host_fact_hostname }}' 
+        name: '{{ host_fact_hostname }}'
         enable_hidden_properties: true
         folder: "{{ vc_datacenter }}/vm/{{ vc_folder }}"
         datastore: vsanDatastore
         disk_provisioning: thin
         networks:
-            "Network 1": "{{ vc_fact_deployment_network }}"
+          "Network 1": "{{ vc_fact_deployment_network }}"
         wait_for_ip_address: true
-        validate_certs: no
+        validate_certs: false
         inject_ovf_env: true
         properties:
-          DeploymentOption.value: 'tiny' # vCenter t-shirt size: tiny,small,medium,large, or infrastructure 
+          DeploymentOption.value: 'tiny' # vCenter t-shirt size: tiny,small,medium,large, or infrastructure
           guestinfo.cis.appliance.net.addr.family: 'ipv4' # ipv4 or ipv6
           guestinfo.cis.appliance.net.mode: 'dhcp' # static or dhcp
-#          guestinfo.cis.appliance.net.pnid: 'localhost.localdomain' # "{{ hostname }}.{{ domain }}" # FQDN of server
-          #guestinfo.cis.appliance.root.passwd: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
           guestinfo.cis.appliance.root.passwd: "{{ vc_fact_password }}"
-          #guestinfo.cis.vmdir.password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}" # SSO Password for administrator@vsphere.local
           guestinfo.cis.vmdir.password: "{{ vc_fact_password }}" # SSO Password for administrator@vsphere.local
           domain: "{{ vc_fact_domain }}"
           guestinfo.cis.appliance.ssh.enabled: 'True'
           guestinfo.cis.deployment.autoconfig: 'True' # Auto-configure after deployment
       register: nested_vm
-
-#    - debug:
-#        msg:  "info is: {{ nested_vm.instance }}"
 
     - name: Pause while reboots itself
       pause:
@@ -133,36 +119,30 @@
         properties:
           - guest.ipAddress
       register: nested_vm
-    
+
     - name: Add host to group vc
       ansible.builtin.add_host:
         name: '{{ host_fact_hostname }}'
         groups: vc
         NESTEDVMIP: "{{ nested_vm.instance.guest.ipAddress }}"
-#        NESTEDVMIP: "{{ nested_vm.instance.guest.ipAddress | ipaddress('ipv4') | split(' ')[0] }}"
-    #    DC: "1"
 
     - debug:
-        msg:  "ip is: {{ nested_vm.instance }}"
+        msg: "ip is: {{ nested_vm.instance }}"
 
     - name: Wait for vCenter
       vmware_about_info:
         hostname: "{{ hostvars[groups['vc'][my_idx_vc]].NESTEDVMIP }}"
         username: 'administrator@{{ vc_fact_domain }}'
-        #password: "{{  lookup('ansible.builtin.env', 'VCESXIPASSWORD')  }}"
         password: "{{ vc_fact_password }}"
-        validate_certs: no
+        validate_certs: false
       retries: 30
       delay: 60
       register: result
       until: result is succeeded
-    
-        
+
     - name: "Wait for {{ hostvars[groups['vc'][my_idx_vc]].inventory_hostname }} {{ nested_vm.instance.guest.ipAddress }} install of VC on host to be complete"
       ansible.builtin.wait_for:
         host: "{{ nested_vm.instance.guest.ipAddress }}"
-        #host: "{{ nested_vm.instance.guest.ipAddress | ipaddress('ipv4') | split(' ')[0] }}"
         port: 443
-    #    delay: 180
         sleep: 10
         timeout: 900

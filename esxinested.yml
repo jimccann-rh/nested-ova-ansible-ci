@@ -1,10 +1,5 @@
 ---
 
-#- name: Include vars of host.yml
-#  ansible.builtin.include_vars:
-#    file: host.yml
-#    name: vcenter
-
 - name: List hosts in ESXi
   debug:
     msg: "Host: {{ item }}"
@@ -19,20 +14,9 @@
   ansible.builtin.set_fact:
     host_fact_hostname: "{{ hostvars[groups['esxi'][my_idx]].inventory_hostname }}"
 
-#- name: Setting host facts
-#  ansible.builtin.set_fact:
-#    vmkguest: "vmkernel8Guest"
-#  when: '"8" in version'
-#
-#- name: Setting host facts
-#  ansible.builtin.set_fact:
-#    vmkguest: "vmkernel7Guest"
-#  when: '"7" in version'
-
 - name: ESXi Exists
   block:
 
-#### TEMP TESTING
     - name: "DELETE virtual machine {{ host_fact_hostname }} version {{ version }}"
       community.vmware.vmware_guest:
         datacenter: "{{ vc_datacenter }}"
@@ -40,7 +24,7 @@
         name: "{{ host_fact_hostname }}"
         state: absent
         force: true
-      when: testingesxi | bool 
+      when: testingesxi | bool
 
     - name: "Does ESXi virtual machine {{ host_fact_hostname }} exist"
       community.vmware.vmware_guest:
@@ -58,7 +42,7 @@
           - guest.ipAddress
       register: nested_vm
 
-    - name: Add host to group esxi 
+    - name: Add host to group esxi
       ansible.builtin.add_host:
         name: '{{ host_fact_hostname }}'
         groups: esxi
@@ -76,36 +60,14 @@
         datastore: vsanDatastore
         disk_provisioning: thin
         networks:
-            "VM Network": "{{ vc_fact_deployment_network }}"
-#            "VM Network": "{{ vc_fact_deployment_network2 }}"
+          "VM Network": "{{ vc_fact_deployment_network }}"
         wait_for_ip_address: true
-        validate_certs: no
+        validate_certs: false
         inject_ovf_env: true
         properties:
           guestinfo.password: "{{ vc_fact_password }}" # SSO Password for administrator@vsphere.local
-          #guestinfo.password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}" # SSO Password for administrator@vsphere.local
-#      register: nested_vm
 
-#    - name: "shutdown virtual machine {{ host_fact_hostname }} version {{ version }}"
-#      community.vmware.vmware_guest:
-#        datacenter: "{{ vc_datacenter }}"
-#        folder: "{{ vc_datacenter }}/vm/{{ vc_folder }}"
-#        name: "{{ host_fact_hostname }}"
-#        state: shutdownguest
-#
-#    - name: Retrieve guest info
-#      community.vmware.vmware_guest_info:
-#        name: "{{ host_fact_hostname }}"
-#        datacenter: "{{ vc_datacenter }}"
-#      register: guest_info
-#      until: guest_info.instance.hw_power_status == "poweredOff"
-#      retries: 60 
-#      delay: 5
-#
-#    - debug:
-#        msg: "{{ guest_info }}"
-
-    - name: "Add disk to virtual machine {{ host_fact_hostname }} version {{ version }}" 
+    - name: "Add disk to virtual machine {{ host_fact_hostname }} version {{ version }}"
       community.vmware.vmware_guest_disk:
         datacenter: "{{ vc_datacenter }}"
         name: "{{ host_fact_hostname }}"
@@ -116,27 +78,25 @@
             state: present
             scsi_controller: 0
             unit_number: 2
-    
+
     - name: "MODIFY cpu/memory virtual machine {{ host_fact_hostname }} version {{ version }}"
       community.vmware.vmware_guest:
         datacenter: "{{ vc_datacenter }}"
         folder: "{{ vc_datacenter }}/vm/{{ vc_folder }}"
         name: "{{ host_fact_hostname }}"
         state: present
-        #state: rebootguest
-#        guest_id: "{{ vmkguest }}"
         hardware:
           memory_mb: "{{ esximemory }}"
           num_cpus: "{{ esxicpu }}"
           nested_virt: true
-    
+
 - name: "Does ESXi virtual machine {{ host_fact_hostname }} exist"
   community.vmware.vmware_guest:
-    datacenter: "{{ vc_datacenter }}" 
-    folder: "{{ vc_datacenter }}/vm/{{ vc_folder }}" 
-    name: "{{ host_fact_hostname }}" 
+    datacenter: "{{ vc_datacenter }}"
+    folder: "{{ vc_datacenter }}/vm/{{ vc_folder }}"
+    name: "{{ host_fact_hostname }}"
     state: present
-    
+
 - name: "poweron virtual machine {{ host_fact_hostname }} version {{ version }}"
   community.vmware.vmware_guest:
     datacenter: "{{ vc_datacenter }}"
@@ -151,7 +111,7 @@
     datacenter: "{{ vc_datacenter }}"
   register: guest_info
   until: guest_info.instance.guest_tools_status == "guestToolsRunning"
-  retries: 60
+  retries: 120
   delay: 5
 
 - debug:
@@ -179,4 +139,3 @@
 #    delay: 180
     sleep: 10
     timeout: 900
-
