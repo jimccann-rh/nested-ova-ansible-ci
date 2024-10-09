@@ -189,6 +189,7 @@
            line: "{{ host_fact_name }}"
            path: /tmp/vcenterip
            create: yes
+           insertafter: EOF
          loop: "{{ groups['vc'] | list }}"
          loop_control:
            loop_var: loop_bms
