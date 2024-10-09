@@ -1,16 +1,17 @@
 ---
 
 - name: List hosts in ESXi
-  debug:
+  ansible.builtin.debug:
     msg: "Host: {{ item }}"
   loop: "{{ groups['esxi'] }}"
 
 - name: List hosts in VC
-  debug:
+  ansible.builtin.debug:
     msg: "Host: {{ item }}"
   loop: "{{ groups['vc'] }}"
 
-- block:
+- name: Setup vsphere
+  block:
     - name: Create Datacenter
       community.vmware.vmware_datacenter:
         datacenter_name: '{{ item }}'
@@ -34,7 +35,8 @@
         enable: true
         drs_default_vm_behavior: fullyAutomated
 
-    - set_fact:
+    - name: Set advs
+      ansible.builtin.set_fact:
         advs: { "das.ignoreInsufficientHbDatastore": "True", "das.ignoreRedundantNetWarning": "True" }
 
     - name: Enable HA without admission control
@@ -52,7 +54,8 @@
       password: "{{ vc_fact_password }}"
       validate_certs: false
 
-- block:
+- name: Set up hosts
+  block:
 
     - name: "Add ESXi Host {{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }} to vCenter {{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
       community.vmware.vmware_host:
