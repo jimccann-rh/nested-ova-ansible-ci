@@ -188,7 +188,7 @@
        - name: Dump vCenter IP to file
          ansible.builtin.copy:
            content: "{{ hostvars[groups['vc'][my_idx]]['NESTEDVMIP'] }}"
-           dest: /tmp/vcenterip.txt
+           dest: /tmp/vcenterip
 
       when: showinfo | bool
 
