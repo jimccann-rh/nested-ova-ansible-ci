@@ -184,6 +184,12 @@
          vars:
            host_fact_name: "{{ hostvars[groups['vc'][my_idx]]['NESTEDVMIP'] }}"
 
+       - name: Remove file vcenterip
+         ansible.builtin.file:
+           path: /tmp/vcenterip
+           state: absent
+         run_once: true
+
        - name: Dump vCenter IP to file
          ansible.builtin.lineinfile:
            line: "{{ host_fact_name }}"
