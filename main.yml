@@ -1,6 +1,7 @@
 ---
 
-- hosts: localhost
+- name: Set up hosts
+  hosts: localhost
   connection: local
   become: false
   gather_facts: false
@@ -22,7 +23,7 @@
   tags:
     - always
 
-- name: create nested VM's
+- name: Create nested VM's
   hosts: localhost
   connection: local
   gather_facts: true
@@ -37,7 +38,7 @@
 
   collections:
     - community.general
-    - community.vmware
+    - vmware.vmware
 
   module_defaults:
     group/vmware:
@@ -48,7 +49,8 @@
 
   tasks:
 
-    - block:
+    - name: set up configs
+      block:
        - name: Needed packages on system
          include_tasks: packlocal.yml
       tags:
@@ -69,7 +71,8 @@
 
       when: '"8" in version'
 
-    - block:
+    - name: Deploy
+      block:
        - name: Deploy ova of ESXi
          include_tasks: esxinested.yml
          loop: "{{ groups['esxi'] | list }}"
