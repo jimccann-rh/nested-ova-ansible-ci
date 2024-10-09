@@ -169,17 +169,13 @@
       vars:
         host_fact_name: "{{ hostvars[groups['vc'][my_idx]].inventory_hostname }}"
 
-    - block:
+    - name: Gather info
+      block:
        - name: Set cron
          include_tasks: cronjob.yml
-#      when: tempenviro | bool
-    - block:
-#       - name: Include vars of vcenter_host.yml
-#         ansible.builtin.include_vars:
-#           file: vcenter_host.yml
-#           name: vcenter
 
-       - debug:
+       - name: Show vCenter IP
+         ansible.builtin.debug:
            msg: "***** {{ host_fact_name }} VCENTER IP ADDRESS *****"
            #msg: "***** {{ host_fact_name }} VCENTER IP ADDRESS ***** password is ***** {{ vc_fact_password }} *****"
          loop: "{{ groups['vc'] | list }}"
@@ -188,6 +184,12 @@
            index_var: my_idx
          vars:
            host_fact_name: "{{ hostvars[groups['vc'][my_idx]]['NESTEDVMIP'] }}"
+
+       - name: Dump vCenter IP to file
+         ansible.builtin.copy:
+           content: "{{ hostvars[groups['vc'][my_idx]]['NESTEDVMIP'] }}"
+           dest: /tmp/vcenterip.txt
+
       when: showinfo | bool
 
   tags:
