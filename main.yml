@@ -177,7 +177,6 @@
        - name: Show vCenter IP
          ansible.builtin.debug:
            msg: "***** {{ host_fact_name }} VCENTER IP ADDRESS *****"
-           #msg: "***** {{ host_fact_name }} VCENTER IP ADDRESS ***** password is ***** {{ vc_fact_password }} *****"
          loop: "{{ groups['vc'] | list }}"
          loop_control:
            loop_var: loop_bms
@@ -186,9 +185,10 @@
            host_fact_name: "{{ hostvars[groups['vc'][my_idx]]['NESTEDVMIP'] }}"
 
        - name: Dump vCenter IP to file
-         ansible.builtin.copy:
-           content: "{{ host_fact_name }}"
-           dest: /tmp/vcenterip
+         ansible.builtin.lineinfile:
+           line: "{{ host_fact_name }}"
+           path: /tmp/vcenterip
+           create: yes
          loop: "{{ groups['vc'] | list }}"
          loop_control:
            loop_var: loop_bms
