@@ -13,7 +13,7 @@
     hour: "{{ cron_time.split()[1] }}"
     day: "{{ cron_time.split()[2] }}"
     month: "{{ cron_time.split()[3] }}"
-    job: source ~/nested.source && cd ~/nested-ova-ansible-ci/ ; ansible-playbook -i hosts main.yml --extra-var cleanupcron=true --extra-var version={{ '"' }}{{ version }}{{ '"' }} --extra-var='{"target_hosts"{{ ":" }} {{ target_hosts}}}' --extra-var='{"target_vcs"{{ ":"}} {{ target_vcs}} }' --extra-var removevsphere=true -t removevsphere >> /tmp/{{ target_vcs | replace('[', '') | replace(']', '') |  regex_replace("'", '')  }}.log 2>&1
+    job: source ~/nested.source && cd ~/nested-ova-ansible-ci/ ; ansible-playbook -i hosts main.yml --extra-var cleanupcron=true --extra-var version={{ '"' }}{{ version }}{{ '"' }} --extra-var='{"target_hosts"{{ ":" }} {{ target_hosts}}}' --extra-var='{"target_vcs"{{ ":"}} {{ target_vcs}} }' --extra-var removevsphere=true -t removevsphere >> /tmp/{{ target_vcs[0] | replace('[', '') | replace(']', '') |  regex_replace("'", '')  }}.log 2>&1
   when: createcron | bool
 
 - name: Remove the cron job
