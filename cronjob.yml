@@ -1,11 +1,11 @@
 ---
 
 - name: Calculate the time 24 hours from now
-  set_fact:
+  ansible.builtin.set_fact:
     cron_time: "{{ lookup('pipe', 'date -d \"+1 hours\" +\"%M %H %d %m %Y\"') }}"
 
 - name: Create the cron job
-  cron:
+  ansible.builtin.cron:
     state: present
     name: "script_cron {{ target_vcs }}"
     user: "{{ lookup('env', 'USER') }}"
@@ -17,7 +17,7 @@
   when: createcron | bool
 
 - name: Remove the cron job
-  cron:
+  ansible.builtin.cron:
     state: absent
     name: "script_cron {{ target_vcs }}"
   when: cleanupcron | bool

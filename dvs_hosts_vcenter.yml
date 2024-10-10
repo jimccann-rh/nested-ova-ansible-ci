@@ -1,9 +1,11 @@
 ---
 
-- set_fact:
+- name: Set datacenter
+  ansible.builtin.set_fact:
     vcdc: "{{ vc_fact_datacenter1 }}"
 
-- block:
+- name: "Create dvSwitch"
+  block:
 
     - name: "Create dvSwitch {{ vcdc }}"
       community.vmware.vmware_dvswitch:
@@ -15,7 +17,8 @@
         state: present
       run_once: true
 
-    - pause:
+    - name: Time out to process
+      ansible.builtin.pause:
         seconds: 10
 
     - name: "Add Host to dVS dvSwitch-nested"
@@ -26,7 +29,8 @@
           - vmnic1
         state: present
 
-    - pause:
+    - name: Time out to process
+      ansible.builtin.pause:
         seconds: 10
 
     - name: Create no-vlan portgroup

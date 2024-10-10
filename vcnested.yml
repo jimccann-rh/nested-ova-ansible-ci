@@ -1,12 +1,12 @@
 ---
 
 - name: List hosts in ESXi
-  debug:
+  ansible.builtin.debug:
     msg: "Host: {{ item }}"
   loop: "{{ groups['esxi'] }}"
 
 - name: List hosts in VC
-  debug:
+  ansible.builtin.debug:
     msg: "Host: {{ item }}"
   loop: "{{ groups['vc'] }}"
 
@@ -23,7 +23,6 @@
   ansible.builtin.set_fact:
     vmkguest: "vmkernel7Guest"
   when: '"7" in version'
-
 
 - name: VC Exists
   block:
@@ -53,11 +52,12 @@
           - guest.ipAddress
       register: nested_vm
 
-    - debug:
+    - name: Show ip address
+      ansible.builtin.debug:
         msg: "ip is: {{ nested_vm.instance.guest.ipAddress }}"
 
     - name: Wait for vCenter
-      vmware_about_info:
+      community.vmware.vmware_about_info:
         hostname: '{{ nested_vm.instance.guest.ipAddress }}'
         username: 'administrator@{{ vc_fact_domain }}'
         password: "{{ vc_fact_password }}"
@@ -99,7 +99,7 @@
       register: nested_vm
 
     - name: Pause while reboots itself
-      pause:
+      ansible.builtin.pause:
         seconds: 180
 
     - name: Retrieve guest info
@@ -126,7 +126,8 @@
         groups: vc
         NESTEDVMIP: "{{ nested_vm.instance.guest.ipAddress }}"
 
-    - debug:
+    - name: Show ip
+      ansible.builtin.debug:
         msg: "ip is: {{ nested_vm.instance }}"
 
     - name: Wait for vCenter

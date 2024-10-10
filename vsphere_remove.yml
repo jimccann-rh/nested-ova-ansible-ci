@@ -1,12 +1,12 @@
 ---
 
 - name: List hosts in ESXi
-  debug:
+  ansible.builtin.debug:
     msg: "Host: {{ item }}"
   loop: "{{ groups['esxi'] }}"
 
 - name: List hosts in VC
-  debug:
+  ansible.builtin.debug:
     msg: "Host: {{ item }}"
   loop: "{{ groups['vc'] }}"
 

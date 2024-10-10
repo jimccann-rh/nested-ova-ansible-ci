@@ -1,12 +1,12 @@
 ---
 
 - name: List hosts in ESXi
-  debug:
+  ansible.builtin.debug:
     msg: "Host: {{ item }}"
   loop: "{{ groups['esxi'] }}"
 
 - name: List hosts in VC
-  debug:
+  ansible.builtin.debug:
     msg: "Host: {{ item }}"
   loop: "{{ groups['vc'] }}"
 
@@ -114,7 +114,8 @@
   retries: 120
   delay: 5
 
-- debug:
+- name: Show guest info
+  ansible.builtin.debug:
     msg: "{{ guest_info }}"
 
 - name: "Does ESXi virtual machine {{ host_fact_hostname }} exist get ip"

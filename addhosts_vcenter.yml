@@ -25,8 +25,8 @@
         datacenter_name: '{{ item.datacenter }}'
         cluster_name: '{{ item.cluster }}'
       loop:
-        - { 'cluster': '{{ vc_fact_cluster1 }}', 'datacenter': '{{ vc_fact_datacenter1  }}' }
-#        - { 'cluster': '{{ vc_fact_cluster2 }}', 'datacenter': '{{ vc_fact_datacenter2  }}' }
+        - { 'cluster': '{{ vc_fact_cluster1 }}', 'datacenter': '{{ vc_fact_datacenter1 }}' }
+#        - { 'cluster': '{{ vc_fact_cluster2 }}', 'datacenter': '{{ vc_fact_datacenter2 }}' }
 
     - name: Enable DRS and set default VM behavior to fully automated
       community.vmware.vmware_cluster_drs:
@@ -82,7 +82,8 @@
       community.vmware.vmware_host_facts:
       register: host_facts
 
-    - debug:
+    - name: Display host facts
+      ansible.builtin.debug:
         msg:
           - "{{ host_facts }}"
 
@@ -95,39 +96,44 @@
       community.vmware.vmware_host_disk_info:
       register: host_vmhbas
 
-    - set_fact:
+    - name: Set ip an ESXi Host
+      ansible.builtin.set_fact:
         esxip: "{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
 
-    - debug:
+    - name: Show esxi info
+      ansible.builtin.debug:
         msg:
           - "{{ host_vmhbas.hosts_disk_info }}"
           - "{{ esxip }}"
 
-    - set_fact:
+    - name: Set disk esxi info
+      ansible.builtin.set_fact:
         vmhbainfo: "{{ host_vmhbas['hosts_disk_info'][esxip] }}"
 
-    - debug:
+    - name: Show vmhbainfo esxi
+      ansible.builtin.debug:
         msg:
           - "{{ vmhbainfo }}"
 
     - name: Find disk by device_ctd
-      debug:
+      ansible.builtin.debug:
         msg: "Disk {{ item.canonical_name }} matches vmhba0:C0:T2:L0"
       loop: "{{ vmhbainfo }}"
       when: item.device_ctd_list[0] == "vmhba0:C0:T2:L0"
 
     - name: Set disk by device_ctd
-      set_fact:
+      ansible.builtin.set_fact:
         vmfs_dn: "{{ item.canonical_name }}"
       loop: "{{ vmhbainfo }}"
       when: item.device_ctd_list[0] == "vmhba0:C0:T2:L0"
 
-    - debug:
+    - name: Show vmfs dn
+      ansible.builtin.debug:
         msg:
           - "{{ vmfs_dn }}"
 
     - name: Create datastore
-      vmware_host_datastore:
+      community.vmware.vmware_host_datastore:
         validate_certs: false
         datastore_name: "Datastore-{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
         vmfs_device_name: "{{ vmfs_dn }}"
