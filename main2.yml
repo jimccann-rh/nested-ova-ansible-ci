@@ -13,6 +13,8 @@
     esxicpu: "20"
     testingesxi: false
     testingvc: false
+    getcert: true
+    installcert: true
 
   collections:
     - community.general
