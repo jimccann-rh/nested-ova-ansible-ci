@@ -142,7 +142,7 @@
     cleanupcron: false
     showinfo: true
     getcert: true
-    installcert: false
+    # installcert: false
 
   collections:
     - community.general
@@ -218,6 +218,7 @@
         index_var: my_idx
       vars:
         host_fact_name: "{{ hostvars[groups['vc'][my_idx]]['NESTEDVMIP'] }}"
+      when: getcert | bool
 
 
   tags:

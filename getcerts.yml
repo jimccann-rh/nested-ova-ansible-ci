@@ -3,14 +3,9 @@
 - name: Get certs
   block:
 
-#    - name: tweak var
-#      ansible.builtin.set_fact:
-#        vcontents2: "{{ vcontents | split }}"
-
     - name: Get certs
       ansible.builtin.get_url:
         url: "https://{{ host_fact_name }}/certs/download.zip"
-        # url: "https://{{ vcontents2[0] }}/certs/download.zip"
         dest: /tmp/download.zip
         validate_certs: false
 
@@ -35,7 +30,6 @@
       ansible.builtin.set_fact:
         cert: "{{ lookup('ansible.builtin.file', '{{ item.path }}') }}"
       loop: "{{ find_result.files }}"
-  when: getcert
 
 - name: Install certs
   block:
@@ -50,4 +44,3 @@
     - name: Update cert index
       ansible.builtin.shell: update-ca-trust extract
       become: true
-  when: installcert
