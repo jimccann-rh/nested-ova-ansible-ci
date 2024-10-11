@@ -4,7 +4,7 @@
   block:
     - name: Get certs
       ansible.builtin.get_url:
-        url: "https://{{ vcontents[0] }}/certs/download.zip"
+        url: "https://{{ vcontents }}/certs/download.zip"
         dest: /tmp/download.zip
         validate_certs: false
 
