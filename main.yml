@@ -141,6 +141,8 @@
     createcron: false
     cleanupcron: false
     showinfo: true
+    getcert: true
+    installcert: true
 
   collections:
     - community.general
@@ -207,6 +209,16 @@
           vars:
             host_fact_name: "{{ hostvars[groups['vc'][my_idx]]['NESTEDVMIP'] }}"
       when: showinfo | bool
+
+    - name: Certs VC
+      ansible.builtin.include_tasks: getcert.yml
+      loop: "{{ groups['vc'] | list }}"
+      loop_control:
+        loop_var: loop_bms
+        index_var: my_idx
+      vars:
+        host_fact_name: "{{ hostvars[groups['vc'][my_idx]]['NESTEDVMIP'] }}"
+
 
   tags:
     - removevsphere
