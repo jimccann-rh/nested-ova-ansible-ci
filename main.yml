@@ -211,7 +211,7 @@
       when: showinfo | bool
 
     - name: Certs VC
-      ansible.builtin.include_tasks: getcert.yml
+      ansible.builtin.include_tasks: getcerts.yml
       loop: "{{ groups['vc'] | list }}"
       loop_control:
         loop_var: loop_bms
