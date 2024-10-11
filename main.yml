@@ -142,7 +142,7 @@
     cleanupcron: false
     showinfo: true
     getcert: true
-    installcert: true
+    installcert: false
 
   collections:
     - community.general
