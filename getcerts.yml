@@ -1,0 +1,47 @@
+---
+
+- name: Get certs
+  block:
+    - name: Get certs
+      ansible.builtin.get_url:
+        url: "https://{{ vcenter.vc_fact_ip }}/certs/download.zip"
+        dest: /tmp/download.zip
+        validate_certs: false
+
+    - name: Extract download.zip to /etc/pki/
+      ansible.builtin.unarchive:
+        src: /tmp/download.zip
+        dest: /tmp/
+
+    - name: Get files
+      ansible.builtin.find:
+        paths: /tmp/certs/lin/
+        file_type: "file"
+        patterns: "*.0"
+      register: find_result
+
+    - name: Get files
+      ansible.builtin.debug:
+        msg: "{{ item.path | basename }}"
+      loop: "{{ find_result.files }}"
+
+    - name: Get cert into var
+      ansible.builtin.set_fact:
+        cert: "{{ lookup('ansible.builtin.file', '{{ item.path }}') }}"
+      loop: "{{ find_result.files }}"
+  when: getcert
+
+- name: Install certs
+  block:
+    - name: Copy certs
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /etc/pki/ca-trust/source/anchors
+      with_fileglob:
+        - "/tmp/certs/lin/*"
+      become: true
+
+    - name: Update cert index
+      ansible.builtin.shell: update-ca-trust extract
+      become: true
+  when: installcert

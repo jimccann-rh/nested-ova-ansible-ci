@@ -1,0 +1,33 @@
+---
+
+
+- name: Testing CERTS
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars:
+    templocation: "{{ ansible_env.HOME }}/build"
+    mountpath: '/data/export/share'
+    version: "7"
+    esximemory: "131072"
+    esxicpu: "20"
+    testingesxi: false
+    testingvc: false
+
+  collections:
+    - community.general
+    - vmware.vmware
+
+  module_defaults:
+    group/vmware:
+      hostname: "{{ lookup('ansible.builtin.env', 'MAINVCHOSTNAME') }}"
+      username: "{{ lookup('ansible.builtin.env', 'MAINVCUSERNAME') }}"
+      password: "{{ lookup('ansible.builtin.env', 'MAINVCPASSWORD') }}"
+      validate_certs: false
+
+  tasks:
+
+    - name: Cert
+      block:
+        - name: Certin
+          ansible.builtin.include_tasks: getcerts.yml
