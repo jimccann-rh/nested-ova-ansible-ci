@@ -2,9 +2,14 @@
 
 - name: Get certs
   block:
+
+    - name: tweak var
+      ansible.builtin.set_fact:
+        vcontents2: "{{ vcontents | split }}"
+
     - name: Get certs
       ansible.builtin.get_url:
-        url: "https://{{ vcontents | split }}/certs/download.zip"
+        url: "https://{{ vcontents2[0] }}/certs/download.zip"
         dest: /tmp/download.zip
         validate_certs: false
 
