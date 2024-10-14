@@ -96,6 +96,8 @@
           domain: "{{ vc_fact_domain }}"
           guestinfo.cis.appliance.ssh.enabled: 'True'
           guestinfo.cis.deployment.autoconfig: 'True' # Auto-configure after deployment
+          guestinfo.cis.appliance.root.shell: 'True'
+
       register: nested_vm
 
     - name: Pause while reboots itself
