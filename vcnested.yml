@@ -98,7 +98,7 @@
           guestinfo.cis.deployment.autoconfig: 'True' # Auto-configure after deployment
           guestinfo.cis.appliance.root.shell: 'True'
 #          guestinfo.cis.appliance.net.pnid: 'localhost'
-
+#          guestinfo.cis.appliance.net.dns.servers: '10.10.10.10'
       register: nested_vm
 
     - name: Pause while reboots itself
