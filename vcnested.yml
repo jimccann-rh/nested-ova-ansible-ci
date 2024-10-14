@@ -97,6 +97,7 @@
           guestinfo.cis.appliance.ssh.enabled: 'True'
           guestinfo.cis.deployment.autoconfig: 'True' # Auto-configure after deployment
           guestinfo.cis.appliance.root.shell: 'True'
+          guestinfo.cis.appliance.net.pnid: 'localhost'
 
       register: nested_vm
 
