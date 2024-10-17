@@ -129,6 +129,11 @@
             loop_var: loop_bms
             index_var: my_idx
 
+        - name: Create tag categories in nested vCenter
+          include_tasks: tagging.yml
+
+        - name: Assign hosts to host groups
+          include_tasks: host_groups.yml
       tags:
         - vcenterhost
 

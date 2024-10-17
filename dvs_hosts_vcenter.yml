@@ -35,7 +35,7 @@
 
     - name: Create no-vlan portgroup
       community.vmware.vmware_dvs_portgroup:
-        portgroup_name: "{{ vc_fact_deployment_network2 }}"
+        portgroup_name: "{{ vc_fact_deployment_network }}"
         switch_name: "dvSwitch-nested"
         vlan_id: 0
         num_ports: 120

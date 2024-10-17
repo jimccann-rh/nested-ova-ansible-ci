@@ -26,7 +26,14 @@
         cluster_name: '{{ item.cluster }}'
       loop:
         - { 'cluster': '{{ vc_fact_cluster1 }}', 'datacenter': '{{ vc_fact_datacenter1 }}' }
-#        - { 'cluster': '{{ vc_fact_cluster2 }}', 'datacenter': '{{ vc_fact_datacenter2 }}' }
+    
+    - name: Create Resource Pool
+      community.vmware.vmware_resource_pool:
+        datacenter: '{{ item.datacenter }}'
+        cluster: '{{ item.cluster }}'
+        resource_pool: 'ipi-ci-clusters'
+      loop:
+        - { 'cluster': '{{ vc_fact_cluster1 }}', 'datacenter': '{{ vc_fact_datacenter1 }}' }
 
     - name: Enable DRS and set default VM behavior to fully automated
       community.vmware.vmware_cluster_drs:

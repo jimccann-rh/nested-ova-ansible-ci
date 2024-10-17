@@ -1,16 +1,20 @@
 vc_fact_domain: "vsphere.local"
 vc_fact_ntp: "10.0.77.54"
-vc_fact_password: "{{ lookup('ansible.builtin.env', 'VCESXIPASSWORD') }}"
-vc_fact_datacenter1: "nested-cidatacenter-1"
-vc_fact_datacenter2: "nested-cidatacenter-2"
-vc_fact_cluster1: "nested-cicluster-1"
+vc_fact_password: "{{ lookup('ansible.builtin.env', 'MAINVCPASSWORD') }}"
+vc_fact_datacenter1: "{{ lookup('ansible.builtin.env', 'NESTED_DATACENTER') }}"
+
+vc_fact_datacenter2: "nested-cidatacenter"
+vc_fact_cluster1: "{{ lookup('ansible.builtin.env', 'NESTED_CLUSTER') }}"
 vc_fact_cluster2: "nested-cicluster-2"
-vc_fact_deployment_network: "ci-vlan-981-testing"
-vc_fact_deployment_network2: "ci-vlan-981-testing"
+vc_fact_deployment_network: "{{ lookup('ansible.builtin.env', 'GOVC_NETWORK') }}"
+vc_fact_deployment_network2: ""
 # below is for nested and is the real vCenter to deploy the nested vc to
 vc_hostname: "{{ lookup('ansible.builtin.env', 'MAINVCHOSTNAME') }}"
 vc_username: "{{ lookup('ansible.builtin.env', 'MAINVCUSERNAME') }}"
 vc_password: "{{ lookup('ansible.builtin.env', 'MAINVCPASSWORD') }}"
-vc_datacenter: "cidatacenter-2"
-vc_cluster: "cicluster-3"
+vc_datacenter: "{{ lookup('ansible.builtin.env', 'GOVC_DATACENTER') }}"
+vc_cluster: "{{ lookup('ansible.builtin.env', 'GOVC_CLUSTER') }}"
 vc_folder: "nested"
+
+###### JOB SPECIFIC VARIABLES WILL BE APPENDED ######
+
