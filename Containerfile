@@ -2,7 +2,7 @@ FROM registry.access.redhat.com/ubi9/ubi@sha256:b00d5990a00937bd1ef7f44547af6c7f
 
 WORKDIR /usr/app/src
 
-RUN dnf install -y python jq git bind-utils unzip
+RUN dnf install -y python jq git bind-utils unzip envsubst
 RUN python3 -m ensurepip --default-pip
 RUN pip3 install ansible pyvmomi --user
 RUN pip install --upgrade git+https://github.com/vmware/vsphere-automation-sdk-python.git
