@@ -4,7 +4,7 @@ WORKDIR /usr/app/src
 
 RUN dnf install -y python jq git bind-utils unzip
 RUN python3 -m ensurepip --default-pip
-RUN pip3 install ansible pyvmomi --user
+RUN pip3 install ansible envsubst pyvmomi --user
 RUN pip install --upgrade git+https://github.com/vmware/vsphere-automation-sdk-python.git
 ENV PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
