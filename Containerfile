@@ -2,6 +2,8 @@ FROM registry.access.redhat.com/ubi8/python-311@sha256:ec2f4c89e18373c75a72f5b47
 
 USER root
 RUN dnf install -y jq git bind-utils unzip
+RUN mkdir -p /usr/app
+RUN chown -R default /usr/app
 
 USER default
 COPY . .
@@ -13,3 +15,4 @@ RUN curl -O -L https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linu
 RUN chmod +x yq_linux_amd64
 RUN mkdir -p /opt/app-root/src/.local/bin
 RUN mv yq_linux_amd64 /opt/app-root/src/.local/bin/yq
+RUN ln -s /opt/app-root/src /usr/app
