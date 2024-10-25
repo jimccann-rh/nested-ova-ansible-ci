@@ -27,14 +27,6 @@
       loop:
         - { 'cluster': '{{ vc_fact_cluster1 }}', 'datacenter': '{{ vc_fact_datacenter1 }}' }
     
-    - name: Create Resource Pool
-      community.vmware.vmware_resource_pool:
-        datacenter: '{{ item.datacenter }}'
-        cluster: '{{ item.cluster }}'
-        resource_pool: 'ipi-ci-clusters'
-      loop:
-        - { 'cluster': '{{ vc_fact_cluster1 }}', 'datacenter': '{{ vc_fact_datacenter1 }}' }
-
     - name: Enable DRS and set default VM behavior to fully automated
       community.vmware.vmware_cluster_drs:
         datacenter: '{{ vc_fact_datacenter1 }}'
@@ -201,3 +193,16 @@
     datacenter: '{{ vc_fact_datacenter1 }}'
     cluster_name: '{{ vc_fact_cluster1 }}'
     allowed_datastores: "Datastore-{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
+
+- name: Create Resource Pool
+  community.vmware.vmware_resource_pool:
+    hostname: "{{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
+    password: "{{ vc_fact_password }}"
+    username: 'administrator@{{ vc_fact_domain }}'
+    validate_certs: false
+    datacenter: '{{ item.datacenter }}'
+    cluster: '{{ item.cluster }}'
+    resource_pool: 'ipi-ci-clusters'
+    state: present
+  loop:
+    - { 'cluster': '{{ vc_fact_cluster1 }}', 'datacenter': '{{ vc_fact_datacenter1 }}' }
