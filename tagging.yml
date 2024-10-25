@@ -31,23 +31,13 @@
       tag_name: "{{ item }}"
     loop: "{{ vc_zone_tags }}"
 
-  - name: Assign region tags
+  - name: Assign topology tags
     community.vmware.vmware_tag_manager:
       object_name: "{{ item.object_name }}"
       object_type: "{{ item.object_type }}"
       tag_names: 
       - "{{ item.tag }}"
     loop: "{{ vc_tag_association }}"
-
-  - name: Assign host tags
-    community.vmware.vmware_tag_manager:
-      object_name: "{{ hostvars[groups['esxi'][idx]].NESTEDVMIP }}"
-      object_type: "HostSystem"
-      tag_names: 
-      - "{{ item }}"
-    loop: "{{ vc_host_tags }}"
-    loop_control:
-      index_var: idx
 
   module_defaults:
     group/vmware:
