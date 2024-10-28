@@ -57,7 +57,7 @@
         name: '{{ host_fact_hostname }}'
         enable_hidden_properties: true
         folder: "{{ vc_datacenter }}/vm/{{ vc_folder }}"
-        datastore: vsanDatastore
+        datastore: "{{ vc_datastore }}"
         disk_provisioning: thin
         networks:
           "VM Network": "{{ vc_fact_deployment_network }}"
@@ -74,7 +74,7 @@
         disk:
           - size_tb: 1
             type: thin
-            datastore: vsanDatastore
+            datastore: "{{ vc_datastore }}"
             state: present
             scsi_controller: 0
             unit_number: 2

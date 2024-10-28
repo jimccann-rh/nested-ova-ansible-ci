@@ -80,7 +80,7 @@
         name: '{{ host_fact_hostname }}'
         enable_hidden_properties: true
         folder: "{{ vc_datacenter }}/vm/{{ vc_folder }}"
-        datastore: vsanDatastore
+        datastore: "{{ vc_datastore }}"
         disk_provisioning: thin
         networks:
           "Network 1": "{{ vc_fact_deployment_network }}"

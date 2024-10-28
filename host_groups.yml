@@ -10,7 +10,8 @@
       state: present
     loop: "{{ vc_host_groups.groups }}"
     loop_control:
-      index_var: idx    
+      index_var: my_idx
+    when: vc_host_groups is defined
 
   module_defaults:
     group/vmware:

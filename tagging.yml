@@ -38,6 +38,10 @@
       tag_names: 
       - "{{ item.tag }}"
     loop: "{{ vc_tag_association }}"
+    retries: 30
+    delay: 60
+    register: result
+    until: result is succeeded    
 
   module_defaults:
     group/vmware:

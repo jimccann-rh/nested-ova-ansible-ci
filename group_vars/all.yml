@@ -13,6 +13,7 @@ vc_hostname: "{{ lookup('ansible.builtin.env', 'MAINVCHOSTNAME') }}"
 vc_username: "{{ lookup('ansible.builtin.env', 'MAINVCUSERNAME') }}"
 vc_password: "{{ lookup('ansible.builtin.env', 'MAINVCPASSWORD') }}"
 vc_datacenter: "{{ lookup('ansible.builtin.env', 'GOVC_DATACENTER') }}"
+vc_datastore: "{{ lookup('ansible.builtin.env', 'GOVC_DATASTORE') }}"
 vc_cluster: "{{ lookup('ansible.builtin.env', 'GOVC_CLUSTER') }}"
 vc_folder: "nested"
 

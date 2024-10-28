@@ -134,6 +134,7 @@
 
         - name: Assign hosts to host groups
           include_tasks: host_groups.yml
+          when: vc_host_groups is defined
       tags:
         - vcenterhost
 
