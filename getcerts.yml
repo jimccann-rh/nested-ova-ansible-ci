@@ -2,10 +2,9 @@
 
 - name: Get certs
   block:
-
     - name: Get certs
       ansible.builtin.get_url:
-        url: "https://{{ host_fact_name }}/certs/download.zip"
+        url: "https://{{ hostvars[vcenter].NESTEDVMIP }}/certs/download.zip"
         dest: /tmp/download.zip
         validate_certs: false
 

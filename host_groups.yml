@@ -1,21 +1,42 @@
 ---
-- block:
-  - name: "Create DRS Host group"
-    community.vmware.vmware_drs_group:
-      cluster_name: "{{ vc_host_groups.cluster }}"
-      datacenter_name: "{{ vc_host_groups.datacenter }}"
-      group_name: "{{ item }}"
-      hosts:
-      - "{{ hostvars[groups['esxi'][idx]].NESTEDVMIP }}"      
-      state: present
-    loop: "{{ vc_host_groups.groups }}"
-    loop_control:
-      index_var: my_idx
-    when: vc_host_groups is defined
-
+- name: "Configure host groups"
+  vars:
+    host_group_map: {}
   module_defaults:
     group/vmware:
       hostname: "{{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
       username: 'administrator@{{ vc_fact_domain }}'
       password: "{{ vc_fact_password }}"
       validate_certs: false
+  block:
+    - name: "Create DRS Host group variables"
+      vars:
+        affinty_type: "{{ item.zoneAffinity | default('ComputeCluster') }}"
+      ansible.builtin.set_fact:
+        host_group_map: "{{ host_group_map | default({}) | combine({item.name: []}) }}"
+      when: "item.server == vcenter and affinty_type == 'HostGroup'"
+      loop: "{{ vcenter_failure_domains }}"
+
+    - name: "Populate DRS Host group variables"
+      vars:
+        affinty_type: "{{ item.zoneAffinity | default('ComputeCluster') }}"
+      ansible.builtin.set_fact:
+        host_group_map: "{{ host_group_map | default({}) | combine({item.name: host_group_map[item.name] + [hostvars[groups['esxi'][fd_idx]].NESTEDVMIP]}) }}"
+      when: "item.server == vcenter and affinty_type == 'HostGroup'"
+      loop: "{{ host_indexed_failure_domains }}"
+      loop_control:
+        index_var: fd_idx
+
+    - name: "Create DRS Host group"
+      vars:
+        affinty_type: "{{ item.zoneAffinity | default('ComputeCluster') }}"
+      community.vmware.vmware_drs_group:
+        cluster_name: '{{ item.topology.computeCluster.split("/")[-1] }}'
+        datacenter_name: "{{ item.topology.datacenter }}"
+        group_name: "{{ item.name }}"
+        hosts: "{{ host_group_map[item.name] }}"
+        state: present
+      when: "item.server == vcenter and affinty_type == 'HostGroup'"
+      loop: "{{ host_indexed_failure_domains }}"
+      loop_control:
+        index_var: fd_idx

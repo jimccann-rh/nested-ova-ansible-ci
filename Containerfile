@@ -8,7 +8,7 @@ RUN chown -R default /usr/app
 USER default
 COPY . .
 
-RUN pip install ansible envsubst pyvmomi
+RUN pip install ansible envsubst pyvmomi envbash ansible-runner
 RUN pip install --upgrade git+https://github.com/vmware/vsphere-automation-sdk-python.git
 
 RUN curl -O -L https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64

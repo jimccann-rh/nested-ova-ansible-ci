@@ -1,99 +1,149 @@
 ---
+- name: Set up configs
+  hosts: localhost
+  connection: local
+  become: false
+  gather_facts: false
+  tasks:
+    - name: Needed packages on system
+      ansible.builtin.include_tasks: packlocal.yml
+      tags:
+        - packlocal
+        - never
 
-- name: Set up hosts
+    - name: Check if /tmp/override-vars.yaml exists
+      ansible.builtin.stat:
+        path: /tmp/override-vars.yaml
+      register: override_file_exists
+
+    - name: Include vars from /tmp/override-vars.yaml
+      ansible.builtin.include_vars:
+        file: /tmp/override-vars.yaml
+      when: override_file_exists.stat.exists
+
+    - name: Resolve installation media
+      ansible.builtin.set_fact:
+        esxiova: "{{ item.esxiova }}"
+        vcenterova: "{{ item.vcenterova }}"
+        httpova: "{{ item.httpova }}"
+      when: 'item.name == version'
+      loop: "{{ vc_assets | list }}"
+
+    - name: Fail if installation media isn't resolved
+      ansible.builtin.fail:
+        msg: "Unable to resolve installation media. Ensure vc_assets is defined."
+      when: httpova is undefined or vcenterova is undefined or esxiova is undefined
+
+- name: Derive topology from platform spec
+  hosts: localhost
+  connection: local
+  become: false
+  gather_facts: false
+  vars:
+    datacenter_cnt: 0
+    host_indexed_failure_domains: []
+
+  tasks:
+    - name: Get platform spec
+      ansible.builtin.slurp:
+        src: "{{ vc_shared_dir }}/nested-ansible-platform.yaml"
+      register: platform_spec_yaml
+
+    - name: Parse platform spec
+      ansible.builtin.set_fact:
+        platform_spec: '{{ platform_spec_yaml.content | b64decode | from_yaml }}'
+
+    - name: Set topology facts
+      ansible.builtin.set_fact:
+        vcenters: '{{ platform_spec.platform.vsphere.vcenters }}'
+        vcenter_cnt: '{{ platform_spec.platform.vsphere.vcenters | length }}'
+        datacenter_cnt: '{{ (datacenter_cnt | int) + (platform_spec.platform.vsphere.vcenters[my_idx].datacenters | length) }}'
+      loop: "{{ platform_spec.platform.vsphere.vcenters | list }}"
+      loop_control:
+        loop_var: loop_bms
+        index_var: my_idx
+
+    - name: Show topology facts
+      ansible.builtin.debug:
+        msg: "***** {{ datacenter_cnt }} datacenters *****"
+
+    # by default, each failure domain gets a single host. the HOSTS_PER_FAILURE_DOMAIN
+    # can be used to set the number of hosts.
+    - name: Update failure domains to account for additional hosts
+      ansible.builtin.set_fact:
+        host_indexed_failure_domains: "{{ host_indexed_failure_domains + platform_spec.platform.vsphere.failureDomains }}"
+      with_sequence: start=1 end="{{ vc_hosts_per_failure_domain }}"
+
+    - name: Initialize ESXi hosts in hostvars
+      ansible.builtin.add_host:
+        name: '{{ vc_cluster_name }}-{{ my_idx + 1 }}'
+        groups: esxi
+        inventory_hostname: '{{ vc_cluster_name }}-{{ my_idx + 1 }}'
+      loop: "{{ host_indexed_failure_domains | list }}"
+      loop_control:
+        loop_var: loop_bms
+        index_var: my_idx
+  tags:
+    - always
+
+- name: Set up nested hosts
   hosts: localhost
   connection: local
   become: false
   gather_facts: false
 
-  tasks:
-
-    - name: Add host to group esxi
-      ansible.builtin.add_host:
-        name: '{{ item }}'
-        groups: esxi
-      loop: '{{ target_hosts | list }}'
-
-    - name: Add host to group vc
-      ansible.builtin.add_host:
-        name: '{{ item }}'
-        groups: vc
-      loop: '{{ target_vcs | list }}'
-
-  tags:
-    - always
-
-- name: Create nested VM's
-  hosts: localhost
-  connection: local
-  gather_facts: true
-  vars:
-    templocation: "{{ ansible_env.HOME }}/build"
-    mountpath: '/data/export/share'
-    version: "7"
-    esximemory: "131072"
-    esxicpu: "20"
-    testingesxi: false
-    testingvc: false
-
-  collections:
-    - community.general
-    - vmware.vmware
-
   module_defaults:
     group/vmware:
-      hostname: "{{ lookup('ansible.builtin.env', 'MAINVCHOSTNAME') }}"
-      username: "{{ lookup('ansible.builtin.env', 'MAINVCUSERNAME') }}"
-      password: "{{ lookup('ansible.builtin.env', 'MAINVCPASSWORD') }}"
+      hostname: "{{ vc_hostname }}"
+      username: "{{ vc_username }}"
+      password: "{{ vc_password }}"
       validate_certs: false
+  vars:
+    host_count_var: "{{ host_indexed_failure_domains | length }}"
 
   tasks:
+    - name: Provision ESXi VMs
+      ansible.builtin.include_tasks: esxinested.yml
+      loop: "{{ host_indexed_failure_domains | list }}"
+      vars:
+        testingvc: false
+        testingesxi: false
+        esximemory: "{{ ((vc_allocated_memory | int) / (host_count_var | int)) | int }}"
+        esxicpu: "{{ ((vc_allocated_vcpus | int) / (host_count_var | int)) | int }}"
+        esxidisk: "{{ ((vc_allocated_disk | int) / (host_count_var | int)) | int }}"
+      loop_control:
+        loop_var: loop_bms
+        index_var: my_idx
 
-    - name: Set up configs
-      block:
-        - name: Needed packages on system
-          ansible.builtin.include_tasks: packlocal.yml
-      tags:
-        - packlocal
-        - never
+- name: Provision vCenters
+  hosts: localhost
+  connection: local
+  become: false
+  gather_facts: false
+  module_defaults:
+    group/vmware:
+      hostname: "{{ vc_hostname }}"
+      username: "{{ vc_username }}"
+      password: "{{ vc_password }}"
+      validate_certs: false
+  tasks:
+    - name: Provision vCenter VMs
+      ansible.builtin.include_tasks: vcnested.yml
+      loop: "{{ vcenters | list }}"
+      vars:
+        testingvc: false
+      loop_control:
+        loop_var: vcenter
+        index_var: vcenter_idx
 
-    - block:
-        - name: Include vars of vcenter_host-7.yml
-          ansible.builtin.include_vars:
-            file: vcenter_host-7.yml
+    - name: Get CA certificates
+      ansible.builtin.include_tasks: getcerts.yml
+      loop: '{{ groups["vc"] | list }}'
+      loop_control:
+        loop_var: vcenter
+        index_var: vcenter_idx
 
-      when: '"7" in version'
-
-    - block:
-        - name: Include vars of vcenter_host-8.yml
-          ansible.builtin.include_vars:
-            file: vcenter_host-8.yml
-
-      when: '"8" in version'
-
-    - name: Deploy
-      block:
-        - name: Deploy ova of ESXi
-          ansible.builtin.include_tasks: esxinested.yml
-          loop: "{{ groups['esxi'] | list }}"
-          loop_control:
-            loop_var: loop_bms
-            index_var: my_idx
-      tags:
-        - esxinested
-
-    - name: Deploy ova of VC
-      block:
-        - name: Setup VC
-          ansible.builtin.include_tasks: vcnested.yml
-          loop: "{{ groups['vc'] | list }}"
-          loop_control:
-            loop_var: loop_bms_vc
-            index_var: my_idx_vc
-      tags:
-        - vcnested
-
-- name: ESXi add vcenter
+- name: Configure topology
   hosts: localhost
   connection: local
   gather_facts: false
@@ -103,129 +153,42 @@
     nfsetup: true
     nfsiso: false
     localcy: false
-
+    failure_domains: "{{ platform_spec.platform.vsphere.failureDomains }}"
   tags:
     - hostvcenter
 
-  collections:
-    - community.general
-    - community.vmware
-
   tasks:
-
-    - name: Set up vCenter
-      block:
-        - name: Add host to vcenter
-          ansible.builtin.include_tasks: addhosts_vcenter.yml
-          loop: "{{ groups['esxi'] | list }}"
-          loop_control:
-            loop_var: loop_bms
-            index_var: my_idx
-
-        - name: Add dvs to vcenter and add host to dvs
-          ansible.builtin.include_tasks: dvs_hosts_vcenter.yml
-          loop: "{{ groups['esxi'] | list }}"
-          loop_control:
-            loop_var: loop_bms
-            index_var: my_idx
-
-        - name: Create tag categories in nested vCenter
-          include_tasks: tagging.yml
-
-        - name: Assign hosts to host groups
-          include_tasks: host_groups.yml
-          when: vc_host_groups is defined
-      tags:
-        - vcenterhost
-
-- name: REMOVE nested VM's
-  hosts: localhost
-  connection: local
-  gather_facts: true
-  vars:
-    removevsphere: false
-    createcron: false
-    cleanupcron: false
-    showinfo: true
-    getcert: true
-    # installcert: false
-
-  collections:
-    - community.general
-    - community.vmware
-
-  module_defaults:
-    group/vmware:
-      hostname: "{{ lookup('ansible.builtin.env', 'MAINVCHOSTNAME') }}"
-      username: "{{ lookup('ansible.builtin.env', 'MAINVCUSERNAME') }}"
-      password: "{{ lookup('ansible.builtin.env', 'MAINVCPASSWORD') }}"
-      validate_certs: false
-
-  tasks:
-
-    - name: Remove vSphere environment
-      ansible.builtin.include_tasks: vsphere_remove.yml
-      loop: "{{ groups['esxi'] | list }}"
-      loop_control:
-        loop_var: loop_bms
-        index_var: my_idx
-      vars:
-        host_fact_name: "{{ hostvars[groups['esxi'][my_idx]].inventory_hostname }}"
-
-    - name: Remove VC
-      ansible.builtin.include_tasks: vsphere_remove.yml
+    - name: Add host to vcenter
+      ansible.builtin.include_tasks: addhosts_vcenter.yml
       loop: "{{ groups['vc'] | list }}"
       loop_control:
-        loop_var: loop_bms
-        index_var: my_idx
-      vars:
-        host_fact_name: "{{ hostvars[groups['vc'][my_idx]].inventory_hostname }}"
+        loop_var: vcenter
+        index_var: vcenter_idx
 
-    - name: Gather info
-      block:
-        - name: Set cron
-          ansible.builtin.include_tasks: cronjob.yml
-
-        - name: Show vCenter IP
-          ansible.builtin.debug:
-            msg: "***** {{ host_fact_name }} VCENTER IP ADDRESS *****"
-          loop: "{{ groups['vc'] | list }}"
-          loop_control:
-            loop_var: loop_bms
-            index_var: my_idx
-          vars:
-            host_fact_name: "{{ hostvars[groups['vc'][my_idx]]['NESTEDVMIP'] }}"
-
-        - name: Remove file vcenterip
-          ansible.builtin.file:
-            path: /tmp/vcenterip
-            state: absent
-          run_once: true
-
-        - name: Dump vCenter IP to file
-          ansible.builtin.lineinfile:
-            line: "{{ host_fact_name }}"
-            path: /tmp/vcenterip
-            create: yes
-            insertafter: EOF
-          loop: "{{ groups['vc'] | list }}"
-          loop_control:
-            loop_var: loop_bms
-            index_var: my_idx
-          vars:
-            host_fact_name: "{{ hostvars[groups['vc'][my_idx]]['NESTEDVMIP'] }}"
-      when: showinfo | bool
-
-    - name: Certs VC
-      ansible.builtin.include_tasks: getcerts.yml
+    - name: Create DVS for vCenters and attaching hosts
+      ansible.builtin.include_tasks: dvs_hosts_vcenter.yml
       loop: "{{ groups['vc'] | list }}"
       loop_control:
-        loop_var: loop_bms
-        index_var: my_idx
-      vars:
-        host_fact_name: "{{ hostvars[groups['vc'][my_idx]]['NESTEDVMIP'] }}"
-      when: getcert | bool
+        loop_var: vcenter
+        index_var: vcenter_idx
 
+    - name: Create tags and attach to failure domain assets
+      ansible.builtin.include_tasks: tagging.yml
+      loop: "{{ groups['vc'] | list }}"
+      loop_control:
+        loop_var: vcenter
+        index_var: vcenter_idx
+      when: vc_skip_tagging != "true"
 
-  tags:
-    - removevsphere
+    - name: Assign hosts to host groups
+      ansible.builtin.include_tasks: host_groups.yml
+      loop: "{{ groups['vc'] | list }}"
+      loop_control:
+        loop_var: vcenter
+        index_var: vcenter_idx
+
+    - name: Dump inventory
+      ansible.builtin.copy:
+        content: "{{ hostvars | to_json }}"
+        dest: "{{ vc_shared_dir }}/nested-inventory.json"
+        mode: '0644'

@@ -1,5 +1,4 @@
 ---
-
 - name: List hosts in ESXi
   ansible.builtin.debug:
     msg: "Host: {{ item }}"
@@ -7,12 +6,12 @@
 
 - name: List hosts in VC
   ansible.builtin.debug:
-    msg: "Host: {{ item }}"
-  loop: "{{ groups['vc'] }}"
+    msg: "Host: {{ item.server }}"
+  loop: "{{ vcenters }}"
 
 - name: Set vc name
   ansible.builtin.set_fact:
-    host_fact_hostname: "{{ hostvars[groups['vc'][my_idx_vc]].inventory_hostname }}"
+    host_fact_hostname: "{{ vcenter.server }}"
 
 - name: Setting host facts
   ansible.builtin.set_fact:
@@ -26,7 +25,6 @@
 
 - name: VC Exists
   block:
-
     - name: "DELETE virtual machine {{ host_fact_hostname }} version {{ version }}"
       community.vmware.vmware_guest:
         datacenter: "{{ vc_datacenter }}"
@@ -97,8 +95,6 @@
           guestinfo.cis.appliance.ssh.enabled: 'True'
           guestinfo.cis.deployment.autoconfig: 'True' # Auto-configure after deployment
           guestinfo.cis.appliance.root.shell: 'True'
-#          guestinfo.cis.appliance.net.pnid: 'localhost'
-#          guestinfo.cis.appliance.net.dns.servers: '10.10.10.10'
       register: nested_vm
 
     - name: Pause while reboots itself
@@ -135,7 +131,7 @@
 
     - name: Wait for vCenter
       vmware_about_info:
-        hostname: "{{ hostvars[groups['vc'][my_idx_vc]].NESTEDVMIP }}"
+        hostname: "{{ hostvars[groups['vc'][vcenter_idx]].NESTEDVMIP }}"
         username: 'administrator@{{ vc_fact_domain }}'
         password: "{{ vc_fact_password }}"
         validate_certs: false
@@ -144,7 +140,7 @@
       register: result
       until: result is succeeded
 
-    - name: "Wait for {{ hostvars[groups['vc'][my_idx_vc]].inventory_hostname }} {{ nested_vm.instance.guest.ipAddress }} install of VC on host to be complete"
+    - name: "Wait for {{ hostvars[groups['vc'][vcenter_idx]].inventory_hostname }} {{ nested_vm.instance.guest.ipAddress }} install of VC on host to be complete"
       ansible.builtin.wait_for:
         host: "{{ nested_vm.instance.guest.ipAddress }}"
         port: 443

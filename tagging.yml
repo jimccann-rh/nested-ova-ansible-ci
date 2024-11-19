@@ -1,51 +1,103 @@
 ---
-- block:
-  - name: Create a zone tag category in nested vCenter
-    community.vmware.vmware_category:
-      validate_certs: no
-      category_name: "openshift-zone"
-      category_description: "Zone tags"
-      category_cardinality: "single"
-      associable_object_types:
-        - "Host"
-        - "Cluster"
+- name: Configure topology
+  run_once: true
+  vars:
+    vcenter_failure_domains: []
+    affinity_tag_type_map: {
+      "Datacenter": "Datacenter",
+      "ComputeCluster": "ClusterComputeResource",
+      "HostGroup": "HostSystem"
+    }
+  block:
+    - name: Get failure domains associated with the vCenter
+      ansible.builtin.set_fact:
+        vcenter_failure_domains: "{{ vcenter_failure_domains + [item] }}"
+      when: "item.server == vcenter"
+      loop: "{{ failure_domains }}"
 
-  - name: Create a region tag category in nested vCenter
-    community.vmware.vmware_category:
-      validate_certs: no
-      category_name: "openshift-region"
-      category_description: "Region tags"
-      category_cardinality: "single"
-      associable_object_types:
-        - "Datacenter"
-  
-  - name: Create region tags
-    community.vmware.vmware_tag:
-      category_name: "openshift-region"
-      tag_name: "{{ item }}"
-    loop: "{{ vc_region_tags }}"
+    - name: Create a zone tag category in nested vCenter
+      community.vmware.vmware_category:
+        validate_certs: no
+        category_name: "openshift-zone"
+        category_description: "Zone tags"
+        category_cardinality: "single"
+        associable_object_types:
+          - "Host"
+          - "Cluster"
 
-  - name: Create zone tags
-    community.vmware.vmware_tag:
-      category_name: "openshift-zone"
-      tag_name: "{{ item }}"
-    loop: "{{ vc_zone_tags }}"
+    - name: Create a region tag category in nested vCenter
+      community.vmware.vmware_category:
+        validate_certs: no
+        category_name: "openshift-region"
+        category_description: "Region tags"
+        category_cardinality: "single"
+        associable_object_types:
+          - "Datacenter"
 
-  - name: Assign topology tags
-    community.vmware.vmware_tag_manager:
-      object_name: "{{ item.object_name }}"
-      object_type: "{{ item.object_type }}"
-      tag_names: 
-      - "{{ item.tag }}"
-    loop: "{{ vc_tag_association }}"
-    retries: 30
-    delay: 60
-    register: result
-    until: result is succeeded    
+    - name: Create region tags
+      community.vmware.vmware_tag:
+        category_name: "openshift-region"
+        tag_name: "{{ item.region }}"
+      loop: "{{ vcenter_failure_domains }}"
+
+    - name: Create zone tags
+      community.vmware.vmware_tag:
+        category_name: "openshift-zone"
+        tag_name: "{{ item.zone }}"
+      loop: "{{ vcenter_failure_domains }}"
+
+    - name: Attach Region Tags
+      vars:
+        affinty_type: "{{ item.regionAffinity | default('Datacenter') }}"
+        resourceName: '{{ {"Datacenter": item.topology.datacenter, "ComputeCluster": item.topology.computeCluster.split("/")[-1]} }}'
+      community.vmware.vmware_tag_manager:
+        object_name: "{{ resourceName[affinty_type] }}"
+        object_type: "{{ affinity_tag_type_map[affinty_type] }}"
+        tag_names:
+          - "{{ item.region }}"
+      loop: "{{ vcenter_failure_domains }}"
+      retries: 30
+      delay: 60
+      when: resourceName != "" and item.region is not match("^-")
+      register: result
+      until: result is succeeded
+
+    - name: Attach Zone Tags
+      vars:
+        affinty_type: "{{ item.zoneAffinity | default('ComputeCluster') }}"
+        resourceName: '{{ {"Datacenter": item.topology.datacenter, "ComputeCluster": item.topology.computeCluster.split("/")[-1]} }}'
+      community.vmware.vmware_tag_manager:
+        object_name: "{{ resourceName[affinty_type] }}"
+        object_type: "{{ affinity_tag_type_map[affinty_type] }}"
+        tag_names:
+          - "{{ item.zone }}"
+      loop: "{{ vcenter_failure_domains }}"
+      retries: 30
+      delay: 60
+      when: affinty_type != 'HostGroup' and item.zone is not match("^-")
+      register: result
+      until: result is succeeded
+
+    - name: Attach host tags
+      vars:
+        affinty_type: "{{ item.zoneAffinity | default('') }}"
+      community.vmware.vmware_tag_manager:
+        object_name: "{{ hostvars[groups['esxi'][fd_idx]].NESTEDVMIP }}"
+        object_type: "HostSystem"
+        tag_names:
+          - "{{ item.zone }}"
+      when: item.server == vcenter and affinty_type == 'HostGroup' and item.zone is not match("^-")
+      loop: "{{ host_indexed_failure_domains }}"
+      loop_control:
+        index_var: fd_idx
+      retries: 30
+      delay: 60
+      register: result
+      until: result is succeeded
 
   module_defaults:
     group/vmware:
-      hostname: "{{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
+      hostname: "{{ hostvars[groups['vc'][vcenter_idx]].NESTEDVMIP }}"
       username: 'administrator@{{ vc_fact_domain }}'
       password: "{{ vc_fact_password }}"
       validate_certs: false
