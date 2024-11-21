@@ -1,46 +1,60 @@
 ---
+- name: Configure topology
+  run_once: true
+  vars:
+    vcenter_failure_domains: []
+  block:
+    - name: Display vCenter facts
+      ansible.builtin.debug:
+        msg:
+          - "{{ vcenter }}"
 
-- name: List hosts in ESXi
-  ansible.builtin.debug:
-    msg: "Host: {{ item }}"
-  loop: "{{ groups['esxi'] }}"
+    - name: Get failure domains associated with the vCenter
+      ansible.builtin.set_fact:
+        vcenter_failure_domains: "{{ vcenter_failure_domains + [failure_domains_loop_var] }}"
+      when: "failure_domains_loop_var.server == vcenter"
+      loop: "{{ failure_domains }}"
+      loop_control:
+        loop_var: failure_domains_loop_var
 
-- name: List hosts in VC
-  ansible.builtin.debug:
-    msg: "Host: {{ item }}"
-  loop: "{{ groups['vc'] }}"
+    - name: Get datacenters associated with the vCenter
+      ansible.builtin.set_fact:
+        vcenter_datacenters: "{{ platform_spec_vcenters_loop_var.datacenters }}"
+      when: "platform_spec_vcenters_loop_var.server == vcenter"
+      loop: "{{ platform_spec.platform.vsphere.vcenters }}"
+      loop_control:
+        loop_var: platform_spec_vcenters_loop_var
 
-- name: Setup vsphere
+- name: Configure topology
+  run_once: true
+  module_defaults:
+    group/vmware:
+      hostname: "{{ hostvars[groups['vc'][vcenter_idx]].NESTEDVMIP }}"
+      username: 'administrator@{{ vc_fact_domain }}'
+      password: "{{ vc_fact_password }}"
+      validate_certs: false
   block:
     - name: Create Datacenter
       community.vmware.vmware_datacenter:
         datacenter_name: '{{ item }}'
         state: present
-      loop:
-        - '{{ vc_fact_datacenter1 }}'
-#        - '{{ vc_fact_datacenter2 }}'
+      loop: "{{ vcenter_datacenters }}"
 
     - name: Create Cluster
       community.vmware.vmware_cluster:
-        datacenter_name: '{{ item.datacenter }}'
-        cluster_name: '{{ item.cluster }}'
-      loop:
-        - { 'cluster': '{{ vc_fact_cluster1 }}', 'datacenter': '{{ vc_fact_datacenter1 }}' }
-    
-    - name: Create Resource Pool
-      community.vmware.vmware_resource_pool:
-        datacenter: '{{ item.datacenter }}'
-        cluster: '{{ item.cluster }}'
-        resource_pool: 'ipi-ci-clusters'
-      loop:
-        - { 'cluster': '{{ vc_fact_cluster1 }}', 'datacenter': '{{ vc_fact_datacenter1 }}' }
+        datacenter_name: '{{ item.topology.datacenter }}'
+        cluster_name: '{{ item.topology.computeCluster.split("/")[-1] }}'
+      when: "item.server == vcenter"
+      loop: "{{ vcenter_failure_domains }}"
 
     - name: Enable DRS and set default VM behavior to fully automated
       community.vmware.vmware_cluster_drs:
-        datacenter: '{{ vc_fact_datacenter1 }}'
-        cluster_name: '{{ vc_fact_cluster1 }}'
         enable: true
         drs_default_vm_behavior: fullyAutomated
+        datacenter: '{{ item.topology.datacenter }}'
+        cluster_name: '{{ item.topology.computeCluster.split("/")[-1] }}'
+      when: "item.server == vcenter"
+      loop: "{{ vcenter_failure_domains }}"
 
     - name: Set advs
       ansible.builtin.set_fact:
@@ -48,34 +62,58 @@
 
     - name: Enable HA without admission control
       community.vmware.vmware_cluster_ha:
-        datacenter: '{{ vc_fact_datacenter1 }}'
-        cluster_name: '{{ vc_fact_cluster1 }}'
+        datacenter: '{{ item.topology.datacenter }}'
+        cluster_name: '{{ item.topology.computeCluster.split("/")[-1] }}'
         enable: true
         advanced_settings: "{{ advs }}"
+      when: "item.server == vcenter"
+      loop: "{{ vcenter_failure_domains }}"
 
+- name: Set up hosts
   run_once: true
+  vars:
+    host_vmhbas: []
+    hosts_in_vcenter: []
   module_defaults:
     group/vmware:
-      hostname: "{{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
+      hostname: "{{ hostvars[groups['vc'][vcenter_idx]].NESTEDVMIP }}"
       username: 'administrator@{{ vc_fact_domain }}'
       password: "{{ vc_fact_password }}"
       validate_certs: false
-
-- name: Set up hosts
   block:
+    - name: "Build Host Slice to be added to vCenter"
+      ansible.builtin.set_fact:
+        hosts_in_vcenter: "{{ hosts_in_vcenter + [hostvars[groups['esxi'][fd_idx]].NESTEDVMIP] }}"
+      when: "item.server == vcenter"
+      loop: "{{ host_indexed_failure_domains }}"
+      loop_control:
+        index_var: fd_idx
 
-    - name: "Add ESXi Host {{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }} to vCenter {{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
+    - name: "Build ESXi to vCenter Mapping"
+      ansible.builtin.set_fact:
+        vc_vcenter_host_map: "{{ vc_vcenter_host_map | default({}) | combine({vcenter: hosts_in_vcenter}) }}"
+      when: "item.server == vcenter"
+      loop: "{{ vcenter_failure_domains }}"
+
+    - name: "Add ESXi Host {{ hostvars[groups['esxi'][vcenter_idx]].NESTEDVMIP }} to vCenter {{ hostvars[groups['vc'][vcenter_idx]].NESTEDVMIP }}"
       community.vmware.vmware_host:
-        datacenter: "{{ vc_fact_datacenter1 }}"
-        cluster: "{{ vc_fact_cluster1 }}"
+        datacenter: '{{ item.topology.datacenter }}'
+        cluster: '{{ item.topology.computeCluster.split("/")[-1] }}'
         esxi_username: "root"
         esxi_password: "{{ vc_fact_password }}"
+        esxi_hostname: "{{ hostvars[groups['esxi'][fd_idx]].NESTEDVMIP }}"
         state: present
+      when: "item.server == vcenter"
+      loop: "{{ host_indexed_failure_domains }}"
+      loop_control:
+        index_var: fd_idx
 
     - name: Set the Power Management Policy of all host systems from cluster to high-performance
       community.vmware.vmware_host_powermgmt_policy:
-        cluster_name: '{{ vc_fact_cluster1 }}'
+        cluster_name: '{{ item.topology.computeCluster.split("/")[-1] }}'
         policy: high-performance
+      when: "item.server == vcenter"
+      loop: "{{ vcenter_failure_domains }}"
 
     - name: Update for system defaults config
       community.vmware.vmware_host_auto_start:
@@ -84,10 +122,20 @@
           start_delay: 100
           stop_action: guestShutdown
           wait_for_heartbeat: true
+        esxi_hostname: "{{ hostvars[groups['esxi'][fd_idx]].NESTEDVMIP }}"
+      when: "item.server == vcenter"
+      loop: "{{ host_indexed_failure_domains }}"
+      loop_control:
+        index_var: fd_idx
 
     - name: Get host facts
-      community.vmware.vmware_host_facts:
       register: host_facts
+      community.vmware.vmware_host_facts:
+        esxi_hostname: "{{ hostvars[groups['esxi'][fd_idx]].NESTEDVMIP }}"
+      when: "item.server == vcenter"
+      loop: "{{ host_indexed_failure_domains }}"
+      loop_control:
+        index_var: fd_idx
 
     - name: Display host facts
       ansible.builtin.debug:
@@ -96,108 +144,67 @@
 
     - name: Rescan HBA's for a given cluster - all found hosts will be scanned
       community.vmware.vmware_host_scanhba:
-        cluster_name: '{{ vc_fact_cluster1 }}'
+        cluster_name: '{{ item.topology.computeCluster.split("/")[-1] }}'
         refresh_storage: true
+      when: "item.server == vcenter"
+      loop: "{{ vcenter_failure_domains }}"
 
-    - name: Gather info about vmhbas of an ESXi Host
+    - name: Gather info about vmhbas of hosts in the cluster
       community.vmware.vmware_host_disk_info:
+        cluster_name: '{{ item.topology.computeCluster.split("/")[-1] }}'
+      when: "item.server == vcenter"
+      loop: "{{ vcenter_failure_domains }}"
       register: host_vmhbas
 
-    - name: Set ip an ESXi Host
-      ansible.builtin.set_fact:
-        esxip: "{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
-
-    - name: Show esxi info
+    - name: Debug multi
       ansible.builtin.debug:
         msg:
-          - "{{ host_vmhbas.hosts_disk_info }}"
-          - "{{ esxip }}"
+          - "{{ item }}"
+      loop: "{{ host_vmhbas['results'] }}"
 
-    - name: Set disk esxi info
-      ansible.builtin.set_fact:
-        vmhbainfo: "{{ host_vmhbas['hosts_disk_info'][esxip] }}"
-
-    - name: Show vmhbainfo esxi
-      ansible.builtin.debug:
-        msg:
-          - "{{ vmhbainfo }}"
-
-    - name: Find disk by device_ctd
-      ansible.builtin.debug:
-        msg: "Disk {{ item.canonical_name }} matches vmhba0:C0:T2:L0"
-      loop: "{{ vmhbainfo }}"
-      when: item.device_ctd_list[0] == "vmhba0:C0:T2:L0"
-
-    - name: Set disk by device_ctd
-      ansible.builtin.set_fact:
-        vmfs_dn: "{{ item.canonical_name }}"
-      loop: "{{ vmhbainfo }}"
-      when: item.device_ctd_list[0] == "vmhba0:C0:T2:L0"
-
-    - name: Show vmfs dn
-      ansible.builtin.debug:
-        msg:
-          - "{{ vmfs_dn }}"
-
-    - name: Create datastore
-      community.vmware.vmware_host_datastore:
-        validate_certs: false
-        datastore_name: "Datastore-{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
-        vmfs_device_name: "{{ vmfs_dn }}"
-        vmfs_version: 6
-        datastore_type: vmfs
-        state: present
-
-    - name: Include vars nfs
-      ansible.builtin.include_vars:
-        file: nfshostip.yml
-      when: nfsetup | bool
-
-    - name: Mount NFS datastores to NESTED ESXi
-      community.vmware.vmware_host_datastore:
-        datastore_name: '{{ item.name }}'
-        datastore_type: '{{ item.type }}'
-        nfs_server: '{{ item.server }}'
-        nfs_path: '{{ item.path }}'
-        nfs_ro: '{{ item.nfs_ro }}'
-        state: present
-        validate_certs: false
-      loop:
-        - { 'name': '{{ nfsname }}', 'server': '{{ nfserver }}', 'path': '{{ sharepoint }}', 'type': 'nfs41', 'nfs_ro': 'true'}
-        - { 'name': '{{ nfsname2 }}', 'server': '{{ nfserver2 }}', 'path': '{{ sharepoint2 }}', 'type': 'nfs41', 'nfs_ro': 'false'}
-      when: nfsetup | bool
+    - name: Create host datastore
+      vars:
+        esxip: "{{ item['hosts_disk_info'] | list | first }}"
+        host_vmhba: "{{ item['hosts_disk_info'][esxip] }}"
+      when: "'hosts_disk_info' in item"
+      ansible.builtin.include_tasks: create_datastore.yml
+      loop: "{{ host_vmhbas['results'] }}"
 
     - name: Enable vMotion for Nested
       community.vmware.vmware_vmkernel:
         vswitch_name: vSwitch0
         portgroup_name: "Management Network"
         enable_vmotion: true
+        esxi_hostname: "{{ hostvars[groups['esxi'][fd_idx]].NESTEDVMIP }}"
         enable_mgmt: true
         device: vmk0
         network:
           type: 'dhcp'
+      when: "item.server == vcenter"
+      loop: "{{ host_indexed_failure_domains }}"
+      loop_control:
+        index_var: fd_idx
 
     - name: Exit Maintenance Mode
       community.vmware.vmware_maintenancemode:
         timeout: 3600
+        esxi_hostname: "{{ hostvars[groups['esxi'][fd_idx]].NESTEDVMIP }}"
         state: absent
+      when: "item.server == vcenter"
+      loop: "{{ host_indexed_failure_domains }}"
 
-  ignore_errors: true
-  module_defaults:
-    group/vmware:
-      hostname: "{{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
-      username: 'administrator@{{ vc_fact_domain }}'
-      password: "{{ vc_fact_password }}"
-      esxi_hostname: "{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
-      validate_certs: false
+      loop_control:
+        index_var: fd_idx
 
-
-- name: Set Allowed vCLS Datastores
-  community.vmware.vmware_cluster_vcls:
-    hostname: "{{ hostvars[groups['vc'][0]].NESTEDVMIP }}"
-    password: "{{ vc_fact_password }}"
-    username: 'administrator@{{ vc_fact_domain }}'
-    validate_certs: false
-    datacenter: '{{ vc_fact_datacenter1 }}'
-    cluster_name: '{{ vc_fact_cluster1 }}'
-    allowed_datastores: "Datastore-{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
+    - name: Create Resource Pool
+      community.vmware.vmware_resource_pool:
+        hostname: "{{ hostvars[groups['vc'][vcenter_idx]].NESTEDVMIP }}"
+        password: "{{ vc_fact_password }}"
+        username: 'administrator@{{ vc_fact_domain }}'
+        validate_certs: false
+        datacenter: '{{ item.topology.datacenter }}'
+        cluster: '{{ item.topology.computeCluster.split("/")[-1] }}'
+        resource_pool: 'ipi-ci-clusters'
+        state: present
+      when: "item.server == vcenter"
+      loop: "{{ vcenter_failure_domains }}"

@@ -2,10 +2,9 @@
 
 - name: Get certs
   block:
-
     - name: Get certs
       ansible.builtin.get_url:
-        url: "https://{{ host_fact_name }}/certs/download.zip"
+        url: "https://{{ hostvars[vcenter].NESTEDVMIP }}/certs/download.zip"
         dest: /tmp/download.zip
         validate_certs: false
 
@@ -36,11 +35,6 @@
     - name: Copy certs
       ansible.builtin.copy:
         src: "{{ item }}"
-        dest: /etc/pki/ca-trust/source/anchors
+        dest: "{{ lookup('ansible.builtin.env', 'SHARED_DIR') }}/additional_ca_cert.pem"
       with_fileglob:
-        - "/tmp/certs/lin/*"
-      become: true
-
-    - name: Update cert index
-      ansible.builtin.shell: update-ca-trust extract
-      become: true
+        - "/tmp/certs/lin/*.0"

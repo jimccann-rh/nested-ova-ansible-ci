@@ -1,0 +1,33 @@
+platform:
+  vsphere:
+    vcenters:
+      - server: vcenter-1
+        user: "administrator@vsphere.local"
+        password: "${vcenter_password}"
+        datacenters:
+        - cidatacenter-nested-0
+        - cidatacenter-nested-1
+    failureDomains:
+      - server: vcenter-1
+        name: "cidatacenter-nested-0-cicluster-nested-0"
+        zone: "cidatacenter-nested-0-cicluster-nested-0"
+        region: cidatacenter-nested-0
+        topology:
+          resourcePool: /cidatacenter-nested-0/host/cicluster-nested-0/Resources/ipi-ci-clusters
+          computeCluster: /cidatacenter-nested-0/host/cicluster-nested-0
+          datacenter: cidatacenter-nested-0
+          datastore: /cidatacenter-nested-0/datastore/dsnested
+          networks:
+            - "VM Network"
+      - server: vcenter-1
+        name: "cidatacenter-nested-1-cicluster-nested-3"
+        zone: "cidatacenter-nested-1-cicluster-nested-3"
+        region: cidatacenter-nested-1
+        zoneAffinity: "HostGroup"
+        topology:        
+          resourcePool: /cidatacenter-nested-1/host/cicluster-nested-3/Resources/ipi-ci-clusters
+          computeCluster: /cidatacenter-nested-1/host/cicluster-nested-3
+          datacenter: cidatacenter-nested-1
+          datastore: /cidatacenter-nested-1/datastore/dsnested
+          networks:
+            - "VM Network"

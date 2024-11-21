@@ -5,19 +5,17 @@
     msg: "Host: {{ item }}"
   loop: "{{ groups['esxi'] }}"
 
-- name: List hosts in VC
-  ansible.builtin.debug:
-    msg: "Host: {{ item }}"
-  loop: "{{ groups['vc'] }}"
-
 - name: Set esxi name
   ansible.builtin.set_fact:
     host_fact_hostname: "{{ hostvars[groups['esxi'][my_idx]].inventory_hostname }}"
 
 - name: ESXi Exists
   block:
+    - name: ESXi hardware
+      ansible.builtin.debug:
+        msg: "Memory: {{ esximemory }}MB - CPU: {{ esxicpu }}"
 
-    - name: "DELETE virtual machine {{ host_fact_hostname }} version {{ version }}"
+    - name: "DELETE virtual machine version"
       community.vmware.vmware_guest:
         datacenter: "{{ vc_datacenter }}"
         folder: "{{ vc_datacenter }}/vm/{{ vc_folder }}"
@@ -26,14 +24,14 @@
         force: true
       when: testingesxi | bool
 
-    - name: "Does ESXi virtual machine {{ host_fact_hostname }} exist"
+    - name: "Does ESXi virtual machine exist"
       community.vmware.vmware_guest:
         datacenter: "{{ vc_datacenter }}"
         folder: "{{ vc_datacenter }}/vm/{{ vc_folder }}"
         name: "{{ host_fact_hostname }}"
         state: present
 
-    - name: "Does ESXi virtual machine {{ host_fact_hostname }} exist get ip"
+    - name: "Does ESXi virtual machine exist get ip"
       community.vmware.vmware_guest_info:
         datacenter: "{{ vc_datacenter }}"
         name: "{{ host_fact_hostname }}"
@@ -49,15 +47,15 @@
         NESTEDVMIP: "{{ nested_vm.instance.guest.ipAddress }}"
 
   rescue:
-
-    - community.vmware.vmware_deploy_ovf:
+    - name: "Deploy ESXi VM"
+      community.vmware.vmware_deploy_ovf:
         url: "http://{{ httpova }}/{{ esxiova }}"
         power_on: false
         datacenter: "{{ vc_datacenter }}"
         name: '{{ host_fact_hostname }}'
         enable_hidden_properties: true
         folder: "{{ vc_datacenter }}/vm/{{ vc_folder }}"
-        datastore: vsanDatastore
+        datastore: "{{ vc_datastore }}"
         disk_provisioning: thin
         networks:
           "VM Network": "{{ vc_fact_deployment_network }}"
@@ -72,9 +70,9 @@
         datacenter: "{{ vc_datacenter }}"
         name: "{{ host_fact_hostname }}"
         disk:
-          - size_tb: 1
+          - size_gb: "{{ esxidisk }}"
             type: thin
-            datastore: vsanDatastore
+            datastore: "{{ vc_datastore }}"
             state: present
             scsi_controller: 0
             unit_number: 2
@@ -137,6 +135,5 @@
   ansible.builtin.wait_for:
     host: "{{ hostvars[groups['esxi'][my_idx]].NESTEDVMIP }}"
     port: 443
-#    delay: 180
     sleep: 10
     timeout: 900

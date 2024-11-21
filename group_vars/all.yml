@@ -1,20 +1,48 @@
 vc_fact_domain: "vsphere.local"
 vc_fact_ntp: "10.0.77.54"
-vc_fact_password: "{{ lookup('ansible.builtin.env', 'MAINVCPASSWORD') }}"
-vc_fact_datacenter1: "{{ lookup('ansible.builtin.env', 'NESTED_DATACENTER') }}"
+vc_fact_password: "{{ lookup('ansible.builtin.env', 'NESTED_PASSWORD') }}"
 
-vc_fact_datacenter2: "nested-cidatacenter"
-vc_fact_cluster1: "{{ lookup('ansible.builtin.env', 'NESTED_CLUSTER') }}"
-vc_fact_cluster2: "nested-cicluster-2"
 vc_fact_deployment_network: "{{ lookup('ansible.builtin.env', 'GOVC_NETWORK') }}"
-vc_fact_deployment_network2: ""
+
 # below is for nested and is the real vCenter to deploy the nested vc to
-vc_hostname: "{{ lookup('ansible.builtin.env', 'MAINVCHOSTNAME') }}"
-vc_username: "{{ lookup('ansible.builtin.env', 'MAINVCUSERNAME') }}"
-vc_password: "{{ lookup('ansible.builtin.env', 'MAINVCPASSWORD') }}"
+vc_hostname: "{{ lookup('ansible.builtin.env', 'GOVC_URL') }}"
+vc_username: "{{ lookup('ansible.builtin.env', 'GOVC_USERNAME') }}"
+vc_password: "{{ lookup('ansible.builtin.env', 'GOVC_PASSWORD') }}"
 vc_datacenter: "{{ lookup('ansible.builtin.env', 'GOVC_DATACENTER') }}"
+vc_datastore: "{{ lookup('ansible.builtin.env', 'GOVC_DATASTORE') }}"
 vc_cluster: "{{ lookup('ansible.builtin.env', 'GOVC_CLUSTER') }}"
 vc_folder: "nested"
+vc_shared_dir: "{{ lookup('ansible.builtin.env', 'SHARED_DIR') }}"
+vc_hosts_per_failure_domain: "{{ lookup('ansible.builtin.env', 'HOSTS_PER_FAILURE_DOMAIN', default=1) }}"
+vc_cluster_name: "{{ lookup('ansible.builtin.env', 'CLUSTER_NAME') }}"
+vc_allocated_memory: "{{ lookup('ansible.builtin.env', 'MEMORY', default=98304) }}"
+vc_allocated_vcpus: "{{ lookup('ansible.builtin.env', 'VCPUS', default=24) }}"
+vc_allocated_disk: "{{ lookup('ansible.builtin.env', 'DISKGB', default=1024) }}"
+vc_skip_tagging: "{{ lookup('ansible.builtin.env', 'SKIP_FAILURE_DOMAIN_TAGGING', default='false') }}"
+vc_vcenter_host_map: {}
 
-###### JOB SPECIFIC VARIABLES WILL BE APPENDED ######
+vc_nfs_shares: 
+- {
+  "server": "161.26.99.159",
+  "name": "dsnested",
+  "path": "/DSW02SEV2284482_22/data01",
+  'type': 'nfs41', 
+  'nfs_ro': 'true'
+}
 
+vc_assets: 
+- {
+  'name': 'VC7.0.3.01400-21477706-ESXi7.0u3q',
+  'esxiova': 'Nested_ESXi7.0u3q_Appliance_Template_v1.ova',
+  'vcenterova': 'VMware-vCenter-Server-Appliance-7.0.3.01400-21477706_OVF10.ova',
+  'httpova': "10.93.245.232:8080"
+}
+- {
+  'name': 'VC8.0.2.00100-22617221-ESXi8.0u2c', 
+  'esxiova': 'Nested_ESXi8.0u2c_Appliance_Template_v1.ova',
+  'vcenterova': 'VMware-vCenter-Server-Appliance-8.0.2.00100-22617221_OVF10.ova',
+  'httpova': "10.93.245.232:8080",
+  'default': "true"
+}
+
+###### ADDITIONAL VARIABLES MAYBE DEFINED OR CHANGED BY DEFINING /tmp/override-vars.yaml ######
