@@ -160,15 +160,17 @@
       ansible.builtin.debug:
         msg:
           - "{{ item }}"
-      loop: "{{ host_vmhbas['results'] }}"
+      loop: "{{ host_vmhbas['results'][0]['hosts_disk_info'] | list }}"
 
     - name: Create host datastore
       vars:
-        esxip: "{{ item['hosts_disk_info'] | list | first }}"
-        host_vmhba: "{{ item['hosts_disk_info'][esxip] }}"
-      when: "'hosts_disk_info' in item"
+        esxip: "{{ item }}"
+        host_vmhba: "{{ host_vmhbas['results'][0]['hosts_disk_info'][item] }}"
+      #when: "'hosts_disk_info' in item"
       ansible.builtin.include_tasks: create_datastore.yml
-      loop: "{{ host_vmhbas['results'] }}"
+      loop: "{{ host_vmhbas['results'][0]['hosts_disk_info'] | list }}"
+      loop_control:
+        index_var: hd_idx
 
     - name: Enable vMotion for Nested
       community.vmware.vmware_vmkernel:
