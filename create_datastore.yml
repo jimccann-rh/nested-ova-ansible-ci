@@ -50,7 +50,6 @@
         datastore_type: '{{ nfs_loop_var.type }}'
         nfs_server: '{{ nfs_loop_var.server }}'
         nfs_path: '{{ nfs_loop_var.path }}'
-        nfs_ro: '{{ nfs_loop_var.nfs_ro }}'
         state: present
         username: root
         validate_certs: false
