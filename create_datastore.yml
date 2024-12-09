@@ -1,0 +1,58 @@
+---
+- name: Isolate host in host_disk_info
+  ansible.builtin.debug:
+    msg:
+      - "{{ host_vmhba }}"
+
+- name: Configure host datastore
+  run_once: true
+  module_defaults:
+    group/vmware:
+      hostname: "{{ esxip }}"
+      username: 'administrator@{{ vc_fact_domain }}'
+      password: "{{ vc_fact_password }}"
+      validate_certs: false
+  block:
+    - name: Find disk by device_ctd
+      ansible.builtin.debug:
+        msg: "Disk {{ host_vmhba_loop_var.canonical_name }} matches vmhba0:C0:T2:L0"
+      loop: "{{ host_vmhba }}"
+      loop_control:
+        loop_var: host_vmhba_loop_var
+      when: host_vmhba_loop_var.device_ctd_list[0] == "vmhba0:C0:T2:L0"
+
+    - name: Set disk by device_ctd
+      ansible.builtin.set_fact:
+        vmfs_dn: "{{ host_vmhba_loop_var.canonical_name }}"
+      loop: "{{ host_vmhba }}"
+      loop_control:
+        loop_var: host_vmhba_loop_var
+      when: host_vmhba_loop_var.device_ctd_list[0] == "vmhba0:C0:T2:L0"
+
+    - name: Show vmfs dn
+      ansible.builtin.debug:
+        msg:
+          - "{{ vmfs_dn }}"
+
+    - name: Create datastore
+      community.vmware.vmware_host_datastore:
+        validate_certs: false
+        username: root
+        datastore_name: "Datastore-{{ esxip }}"
+        vmfs_device_name: "{{ vmfs_dn }}"
+        vmfs_version: 6
+        datastore_type: vmfs
+        state: present
+
+    - name: Mount NFS datastores to NESTED ESXi
+      community.vmware.vmware_host_datastore:
+        datastore_name: '{{ nfs_loop_var.name }}'
+        datastore_type: '{{ nfs_loop_var.type }}'
+        nfs_server: '{{ nfs_loop_var.server }}'
+        nfs_path: '{{ nfs_loop_var.path }}'
+        state: present
+        username: root
+        validate_certs: false
+      loop: "{{ vc_nfs_shares }}"
+      loop_control:
+        loop_var: nfs_loop_var
