@@ -86,7 +86,9 @@
         hardware:
           memory_mb: "{{ esximemory }}"
           num_cpus: "{{ esxicpu }}"
+          num_cpu_cores_per_socket: "{{ esxicpu }}"
           nested_virt: true
+          version: 21
 
 - name: "Does ESXi virtual machine {{ host_fact_hostname }} exist"
   community.vmware.vmware_guest:
